@@ -124,50 +124,64 @@ def classifier_vote():
     # TODO for three phase signals, classify each idependently, then have a best of 3 voting mechanism to classify the complete sample
     return classification
 
+def create_feature_matrix():
+    feature_matrix_columns = ["signal_id", "measurement_id", "entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "fault"]
+    feature_matrix = pd.DataFrame([], columns=feature_matrix_columns)
+    return feature_matrix, feature_matrix_columns
 
-
-def vsb_main(source_meta, source_data):
+def vsb_main(source_meta, source_data, data_type):
     
-    df_meta, min_id, max_id = load_metadata(source_meta)
-    print(min_id)
-    print(max_id)
-    print(df_meta.head(12))
+    df_meta, min_id, max_id = load_metadata(source_meta)  # retrieve relevant meta data for training or test
+    feature_matrix, feature_matrix_columns = create_feature_matrix()  # create new feature matrix data frame
 
     for measurement_id in range(min_id, max_id+1):
         measurement_meta_df = df_meta[df_meta["id_measurement"]==measurement_id]
         signal_ids = measurement_meta_df.signal_id.tolist()  # example [8709, 8710, 8711]
         #print(signal_ids)  # example [8709, 8710, 8711]
         sample_df = load_sample(source_data, signal_ids[0], signal_ids[2])
-        if signal_ids[0] == 0:
-            print(sample_df.head())
 
-            # Raw Signal from Data
-            phase0_raw_signal = sample_df[str(signal_ids[0])]
-            phase1_raw_signal = sample_df[str(signal_ids[1])]
-            phase2_raw_signal = sample_df[str(signal_ids[2])]
+        # Raw Signal from Data
+        phase0_raw_signal = sample_df[str(signal_ids[0])]
+        phase1_raw_signal = sample_df[str(signal_ids[1])]
+        phase2_raw_signal = sample_df[str(signal_ids[2])]
 
-            # Denoise the Raw Signal with Discrete Wavelet Transform
-            phase0_dwt_signal = discete_wavelet_transform(phase0_raw_signal)
-            phase1_dwt_signal = discete_wavelet_transform(phase1_raw_signal)
-            phase2_dwt_signal = discete_wavelet_transform(phase2_raw_signal, wavelet="db4", level=1, plot_enable=False)
+        # Denoise the Raw Signal with Discrete Wavelet Transform
+        phase0_dwt_signal = discete_wavelet_transform(phase0_raw_signal)
+        phase1_dwt_signal = discete_wavelet_transform(phase1_raw_signal)
+        phase2_dwt_signal = discete_wavelet_transform(phase2_raw_signal, wavelet="db4", level=1, plot_enable=False)
 
-            # Detrend the Transformed Signal to "Flatten" it
-            phase0_dwt_detrend_signal = detrend_signal(phase0_dwt_signal)
-            phase1_dwt_detrend_signal = detrend_signal(phase1_dwt_signal)
-            phase2_dwt_detrend_signal = detrend_signal(phase2_dwt_signal)
+        # Detrend the Transformed Signal to "Flatten" it
+        phase0_dwt_detrend_signal = detrend_signal(phase0_dwt_signal)
+        phase1_dwt_detrend_signal = detrend_signal(phase1_dwt_signal)
+        phase2_dwt_detrend_signal = detrend_signal(phase2_dwt_signal)
 
-            # Perform Feature Extraction on the Transformed, "Flattened" Signal
-            phase0_features = get_features(phase0_dwt_detrend_signal)
-            phase1_features = get_features(phase1_dwt_detrend_signal)
-            phase2_features = get_features(phase2_dwt_detrend_signal)
-            phase_features = phase0_features + phase1_features + phase2_features  # TODO all or nothing approach, else make each a row
-            
-            
-            
+        # Perform Feature Extraction on the Transformed, "Flattened" Signal
+        phase0_features = get_features(phase0_dwt_detrend_signal)
+        phase1_features = get_features(phase1_dwt_detrend_signal)
+        phase2_features = get_features(phase2_dwt_detrend_signal)
+
+        # Stage Feature Arrays for Addition to Feature Matrix
+        if data_type.lower() == "train":
+            phase0_features_df = pd.DataFrame([[signal_ids[0], measurement_id] + phase0_features + [df_meta.target[df_meta.signal_id == signal_ids[0]].values[0]]], columns=feature_matrix_columns)
+            phase1_features_df = pd.DataFrame([[signal_ids[1], measurement_id] + phase0_features + [df_meta.target[df_meta.signal_id == signal_ids[1]].values[0]]], columns=feature_matrix_columns)
+            phase2_features_df = pd.DataFrame([[signal_ids[2], measurement_id] + phase0_features + [df_meta.target[df_meta.signal_id == signal_ids[2]].values[0]]], columns=feature_matrix_columns)
+        else:
+            phase0_features_df = pd.DataFrame([[signal_ids[0], measurement_id] + phase0_features + [np.NaN]], columns=feature_matrix_columns)
+            phase1_features_df = pd.DataFrame([[signal_ids[1], measurement_id] + phase0_features + [np.NaN]], columns=feature_matrix_columns)
+            phase2_features_df = pd.DataFrame([[signal_ids[2], measurement_id] + phase0_features + [np.NaN]], columns=feature_matrix_columns)
+
+        # Append Feature Matrix Data Frame
+        feature_matrix = feature_matrix.append(phase0_features_df, ignore_index=True)
+        feature_matrix = feature_matrix.append(phase1_features_df, ignore_index=True)
+        feature_matrix = feature_matrix.append(phase2_features_df, ignore_index=True)
+        
+        if signal_ids[0] == 15:
+            print(feature_matrix)
+            feature_matrix.to_csv(data_type+"_features.csv", sep=",")
             break  #TODO remove, its for debug to stop after the first sample runs
 
-            # TODO Feed features to different classification models
-            # SVM, Logistic Regression, k-NN, Random Forest 
+        # TODO Feed features to different classification models
+        # SVM, Logistic Regression, k-NN, Random Forest 
 
 
         #for signal_id in measurement_meta_df.signal_id:
@@ -179,4 +193,7 @@ def vsb_main(source_meta, source_data):
 
 source_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/train.parquet"
 source_meta = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/metadata_train.csv"
-vsb_main(source_meta, source_data)  # train the model
+vsb_main(source_meta, source_data, "train")  # train the model
+
+
+
