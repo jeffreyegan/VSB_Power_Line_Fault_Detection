@@ -177,8 +177,8 @@ def vsb_main(source_meta, source_data, data_type):
         
         if signal_ids[0] == 15:
             print(feature_matrix)
-            feature_matrix.to_csv(data_type+"_features.csv", sep=",")
-            break  #TODO remove, its for debug to stop after the first sample runs
+            #feature_matrix.to_csv(data_type+"_features.csv", sep=",")
+            #break  TODO remove, its for debug to stop after the first sample runs
 
         # TODO Feed features to different classification models
         # SVM, Logistic Regression, k-NN, Random Forest 
@@ -186,6 +186,8 @@ def vsb_main(source_meta, source_data, data_type):
 
         #for signal_id in measurement_meta_df.signal_id:
           #  print(signal_id)
+    # After processing and extracting features from each signal in the test set, save feature matrix
+    feature_matrix.to_csv(data_type+"_features.csv", sep=",")
 
 
 
