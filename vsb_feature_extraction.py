@@ -176,7 +176,7 @@ def vsb_feature_extraction(source_meta, source_data, data_type, dwt_type):
         feature_matrix = feature_matrix.append(phase1_features_df, ignore_index=True)
         feature_matrix = feature_matrix.append(phase2_features_df, ignore_index=True)
         
-        if measurement_id%1000 == 0:
+        if measurement_id%500 == 0:
             print("Now processing measurement_id: "+str(measurement_id)+" at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     # After processing and extracting features from each signal in the test set, save feature matrix
@@ -192,7 +192,8 @@ Coiflet = ["coif1", "coif2", "coif3", "coif4", "coif5"]
 Biorthogonal = ["bior1.1", "bior1.3", "bior1.5", "bior2.2", "bior2.4", "bior2.6", "bior2.8", "bior3.1", "bior3.3", "bior3.5", "bior3.7", "bior3.9", "bior4.4", "bior5.5", "bior6.8"]
 Reverse_Biorthogonal = ["rbio1.1", "rbio1.3", "rbio1.5", "rbio1.2", "rbio1.4", "rbio1.6", "rbio1.8", "rbio3.1", "rbio3.3", "rbio3.5", "rbio3.7", "rbio3.9", "rbio4.4", "rbio5.5", "rbio6.8"]
 
-dwt_types = Discrete_Meyer + Coiflet
+#dwt_types = Discrete_Meyer + Coiflet
+dwt_types = Daubechies[0:3] + Symlets[0:3]
 
 
 # Data Source
@@ -203,4 +204,4 @@ data_type = "train"
 for dwt_type in dwt_types:
     print("Starting signal processing and feature extraction on "+data_type+" data with the "+dwt_type+" transform at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     vsb_feature_extraction(source_meta, source_data, data_type, dwt_type)
-print("Done!")
+print("Done! at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
