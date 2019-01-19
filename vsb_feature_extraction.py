@@ -193,8 +193,8 @@ Biorthogonal = ["bior1.1", "bior1.3", "bior1.5", "bior2.2", "bior2.4", "bior2.6"
 Reverse_Biorthogonal = ["rbio1.1", "rbio1.3", "rbio1.5", "rbio1.2", "rbio1.4", "rbio1.6", "rbio1.8", "rbio3.1", "rbio3.3", "rbio3.5", "rbio3.7", "rbio3.9", "rbio4.4", "rbio5.5", "rbio6.8"]
 
 #dwt_types = Discrete_Meyer + Coiflet
-dwt_types = Daubechies[1:4] + Symlets[1:4]
-
+#dwt_types = Daubechies[1:4] + Symlets[1:4]
+dwt_types = Biorthogonal[1:8]
 
 # Data Source
 source_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/train.parquet"
