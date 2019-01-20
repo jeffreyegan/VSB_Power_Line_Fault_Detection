@@ -40,29 +40,43 @@ def score_classifier(truth, predictions):
     #print(f1_score(truth, predictions))
     return m_accuracy, m_recall, m_precision, m_f1, c_matrix
 
+
 def classification_k_nearest(features, labels, k):
     from sklearn.neighbors import KNeighborsClassifier
     x_train, x_test, y_train, y_test = split_data(features, labels)
-
     time_in = time.time()
     classifier = KNeighborsClassifier(n_neighbors=k)
-    classifier.fit(x_train, y_train)
+    classifier.fit(x_train, y_train.values.ravel())
     y_predicted = classifier.predict(x_test)
-    m_accuracy, m_recall, m_precision, m_f1, c_matrix = score_classifier(y_test, y_predicted)
+    m_accuracy, m_recall, m_precision, m_f1, c_matrix = score_classifier(y_test, y_predicted.ravel())
     print('Time elapsed: '+str(time.time() - time_in)+'')
     return m_accuracy, m_recall, m_precision, m_f1, c_matrix
+
 
 def classification_support_vector_machine(features, labels, kernel_value, gamma_value):
     from sklearn.svm import SVC
     x_train, x_test, y_train, y_test = split_data(features, labels)
     time_in = time.time()
     classifier = SVC(kernel=kernel_value, gamma=gamma_value)
-    classifier.fit(x_train, y_train)
+    classifier.fit(x_train, y_train.values.ravel())
     y_predicted = classifier.predict(x_test)
-    m_accuracy, m_recall, m_precision, m_f1, c_matrix = score_classifier(y_test, y_predicted)
+    m_accuracy, m_recall, m_precision, m_f1, c_matrix = score_classifier(y_test, y_predicted.ravel())
     #score = classifier.score(x_test, y_test)
     print('Time elapsed: ' + str(time.time() - time_in) + '')
     return m_accuracy, m_recall, m_precision, m_f1, c_matrix
+
+
+def classification_random_forest(features, labels, n_value):
+    from sklearn.ensemble import RandomForestClassifier
+    x_train, x_test, y_train, y_test = split_data(features, labels)
+    time_in = time.time()
+    classifier = RandomForestClassifier(n_estimators=n_value)  # Create Gaussian Classifier
+    classifier.fit(x_train, y_train.values.ravel())
+    y_predicted = classifier.predict(x_test)
+    m_accuracy, m_recall, m_precision, m_f1, c_matrix = score_classifier(y_test, y_predicted.ravel())
+    print('Time elapsed: '+str(time.time() - time_in)+'')
+    return m_accuracy, m_recall, m_precision, m_f1, c_matrix
+
 
 def vsb_models(filename):
     df = load_feature_data(filename)
@@ -74,8 +88,7 @@ def vsb_models(filename):
     recall = []
     precision = []
     f1 = []
-    k_values = [3,5,7] #list(range(3,21,2))
-
+    k_values = list(range(3,25,2))
     for k in k_values:
         m_accuracy, m_recall, m_precision, m_f1, c_matrix = classification_k_nearest(features, labels, k)
         print(c_matrix)
@@ -87,6 +100,7 @@ def vsb_models(filename):
     plot_labels = ['Accuracy', 'Recall', 'Precision', 'F1 Score']
     blues = ["#66D7EB", "#51ACC5", "#3E849E", "#2C5F78", "#1C3D52", "#0E1E2B"]
 
+    fig=plt.figure(figsize=(12, 8), dpi= 80, facecolor='w', edgecolor='k')
     plt.plot(k_values, accuracy, '-', label=plot_labels[0], color=blues[0])
     plt.plot(k_values, recall, '--', label=plot_labels[1], color=blues[1])
     plt.plot(k_values, precision, '-.', label=plot_labels[2], color=blues[2])
@@ -95,14 +109,55 @@ def vsb_models(filename):
     plt.title('K Nearest Neighbors Classification - Performance vs k Value')
     plt.xlabel('k Value')
     plt.ylabel('Classifier Scores')
-    plt.show()
+    plt.savefig("performance_knn.png", bbox_inches='tight')
 
 
-    gamma_values = [0.5, 1.0, 2.5]
+    accuracy = []
+    recall = []
+    precision = []
+    f1 = []
+    gamma_values = np.linspace(0.05, 500, 500)
     kernel_value = "rbf"
     for gamma in gamma_values:
         m_accuracy, m_recall, m_precision, m_f1, c_matrix = classification_support_vector_machine(features, labels, kernel_value, gamma)
-        print(c_matrix)
+        accuracy.append(m_accuracy)
+        recall.append(m_recall)
+        precision.append(m_precision)
+        f1.append(m_f1)
+    fig=plt.figure(figsize=(12, 8), dpi= 80, facecolor='w', edgecolor='k')
+    plt.plot(gamma_values, accuracy, '-', label=plot_labels[0], color=blues[0])
+    plt.plot(gamma_values, recall, '--', label=plot_labels[1], color=blues[1])
+    plt.plot(gamma_values, precision, '-.', label=plot_labels[2], color=blues[2])
+    plt.plot(gamma_values, f1, ':', label=plot_labels[3], color=blues[3])
+    plt.legend(loc='lower right')
+    plt.title('Support Vector Machine Classification - RBF Kernel Performance vs Gamma')
+    plt.xlabel('Gamma')
+    plt.ylabel('Classifier Scores')
+    plt.savefig("performance_svm.png", bbox_inches='tight')
+
+
+    accuracy = []
+    recall = []
+    precision = []
+    f1 = []
+    n_values = list(range(5,250,5))
+    for n_value in n_values:
+        m_accuracy, m_recall, m_precision, m_f1, c_matrix = classification_random_forest(features, labels, n_value)
+        accuracy.append(m_accuracy)
+        recall.append(m_recall)
+        precision.append(m_precision)
+        f1.append(m_f1)
+    fig=plt.figure(figsize=(12, 8), dpi= 80, facecolor='w', edgecolor='k')
+    plt.plot(n_values, accuracy, '-', label=plot_labels[0], color=blues[0])
+    plt.plot(n_values, recall, '--', label=plot_labels[1], color=blues[1])
+    plt.plot(n_values, precision, '-.', label=plot_labels[2], color=blues[2])
+    plt.plot(n_values, f1, ':', label=plot_labels[3], color=blues[3])
+    plt.legend(loc='lower right')
+    plt.title('Random Forest Classification - Performance vs Number of Estimators')
+    plt.xlabel('Number of Estimators')
+    plt.ylabel('Classifier Scores')
+    plt.savefig("performance_rf.png", bbox_inches='tight')
+
 
 filename = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/train_features_dmey.csv"
 vsb_models(filename)
