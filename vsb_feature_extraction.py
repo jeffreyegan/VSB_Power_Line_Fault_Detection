@@ -9,8 +9,6 @@ import scipy
 import pywt
 import peakutils
 from statsmodels.robust import mad
-from scipy import fftpack
-#from numpy.fft import *
 import collections
 from matplotlib import pyplot as plt
 import seaborn as sns
@@ -46,13 +44,6 @@ def plot_signal(phase0, phase1, phase2, plot_title):
     plt.show()
     return
 
-
-#FFT to filter out HF components and get main signal profile
-def low_pass_filter(s, threshold=1e4):
-    fourier = rfft(s)
-    frequencies = rfftfreq(s.size, d=2e-2/s.size)
-    fourier[frequencies > threshold] = 0
-    return irfft(fourier)
 
 # Discrete Wavelet Transform on the Signal to Remove Noise
 def discete_wavelet_transform(signal, wavelet="db4", level=1, plot_enable=False, title=None):
@@ -110,7 +101,7 @@ def calculate_peak_widths(peak_idxs):
     tmp_w = 1
     widths = []
     for idx in range(1,len(peak_idxs)):
-        if peak_idxs[idx]-peak_idxs[idx-1] == 1:
+        if peak_idxs[idx]-peak_idxs[idx-1] < 3:
             tmp_w +=1
         else:
             widths.append(tmp_w)
@@ -118,23 +109,24 @@ def calculate_peak_widths(peak_idxs):
     widths.append(tmp_w)
     min_width = min(np.array(widths))
     max_width = max(np.array(widths))
-    mean_width = np.nanamean(np.array(widths))
+    mean_width = np.nanmean(np.array(widths))
     num_true_peaks = len(widths)
 
     return min_width, max_width, mean_width, num_true_peaks
 
 def calculate_peaks(signal):
-    peak_indexes = peakutils.indexes(signal, thres=np.nanmean(signal)+3*np.nanstd(signal), min_dist=0)  # where peaks are
+    peak_indexes = peakutils.indexes(signal, thres=0.5, min_dist=1)  # where peaks are
     peak_values = signal[peak_indexes]
-
     num_detect_peak = len(peak_indexes)
-    min_height = min(peak_values)
-    max_height = max(peak_values)
-    mean_height = np.nanamean(peak_values)
+    if num_detect_peak > 0:
+        min_height = min(peak_values)
+        max_height = max(peak_values)
+        mean_height = np.nanmean(peak_values)
+        min_width, max_width, mean_width, num_true_peaks = calculate_peak_widths(peak_indexes)
+        return [min_height, max_height, mean_height, min_width, max_width, mean_width, num_detect_peak, num_true_peaks]
+    else:
+        return [0, 0, 0, 0, 0, 0, 0, 0]
 
-    min_width, max_width, mean_width, num_true_peaks = calculate_peak_widths(peak_indexes)
-
-    return [min_height, max_height, mean_height, min_width, max_width, mean_width, num_detect_peak, num_true_peaks]
 
 # Extract features from the signal and build an array of them
 def get_features(signal):
@@ -212,7 +204,7 @@ def vsb_feature_extraction(source_meta, source_data, data_type, dwt_type):
             print("Now processing measurement_id: "+str(measurement_id)+" at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     # After processing and extracting features from each signal in the test set, save feature matrix
-    feature_matrix.to_csv(data_type+"_features_"+dwt_type+".csv", sep=",")
+    feature_matrix.to_csv("extracted_features/"+data_type+"_features_"+dwt_type+".csv", sep=",")
 
 
 
@@ -234,6 +226,10 @@ dwt_types = ["db4", "db5"]
 source_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/train.parquet"
 source_meta = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/metadata_train.csv"
 data_type = "train"
+
+source_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/test.parquet"
+source_meta = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/metadata_test.csv"
+data_type = "test"
 
 for dwt_type in dwt_types:
     print("Starting signal processing and feature extraction on "+data_type+" data with the "+dwt_type+" transform at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))

@@ -19,10 +19,16 @@ def split_data(features, labels, random_state_value):
     return x_train, x_test, y_train, y_test
 
 def matthews_corr_coef(c_matrix):  # Use 2x2 Confusion Matrix to Calculate Matthews Correlation Coefficient
-    TP = c_matrix[0][0]  # True Positives
-    TN = c_matrix[0][1]  # True Negavitves
+    #TP = c_matrix[0][0]  # True Positives
+    #TN = c_matrix[0][1]  # True Negavitves
+    #FP = c_matrix[1][0]  # False Positives
+    #FN = c_matrix[1][1]  # False Negatives
+
+    TP = c_matrix[1][1]  # True Positives
+    TN = c_matrix[0][0]  # True Negavitves
     FP = c_matrix[1][0]  # False Positives
-    FN = c_matrix[1][1]  # False Negatives
+    FN = c_matrix[0][1]  # False Negatives
+
     MCC = ((TP * TN) - (FP * FN)) / np.sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN))
     print(MCC)
     return MCC
@@ -51,6 +57,7 @@ def classification_random_forest(features, labels, n_value, random_seed):
 # Monte Carlo Trial Random Seeds
 random_states = list(range(1, 51, 5))  # 10 seeds
 num_estimators_range = [15, 20, 25, 30]
+num_estimators_range = [50, 100, 500, 1000]
 
 # Discrete Wavelet Transform Types
 Discrete_Meyer = ["dmey"]
@@ -61,6 +68,8 @@ Biorthogonal = ["bior1.1", "bior1.3", "bior1.5", "bior2.2", "bior2.4", "bior2.6"
 Reverse_Biorthogonal = ["rbio1.1", "rbio1.3", "rbio1.5", "rbio1.2", "rbio1.4", "rbio1.6", "rbio1.8", "rbio3.1", "rbio3.3", "rbio3.5", "rbio3.7", "rbio3.9", "rbio4.4", "rbio5.5", "rbio6.8"]
 dwt_types = Discrete_Meyer + Coiflet + Daubechies[1:4] + Symlets[1:4] + Daubechies[5:6] # DWTs used to extract features so far
 
+dwt_types = ["db4"]
+
 # Run Monte Carlo Trials
 monte_df_cols = ["dwt_type", "random_seed", "num_estimators", "accuracy", "recall", "precision", "f1_score", "matthews_corr_coef"]
 monte_df = pd.DataFrame([], columns=monte_df_cols)
@@ -69,9 +78,11 @@ for dwt in dwt_types:
     print("Starting monte carlo trials for the "+dwt+" transform at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     for number_estimators in num_estimators_range:
         for seed in random_states:
-            file_name = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/train_features_"+dwt+".csv"
+            file_name = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/pre_peak_processing/train_features_"+dwt+".csv"
+            file_name = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/train_features_"+dwt+".csv"
             df = load_feature_data(file_name)
             features = df[["entropy", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings"]]
+            features = df[["entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks"]]
             labels = df[["fault"]]
             m_accuracy, m_recall, m_precision, m_f1, mcc = classification_random_forest(features, labels, number_estimators, seed)
             trial_results = pd.DataFrame([[dwt, seed, number_estimators, m_accuracy, m_recall, m_precision, m_f1, mcc]], columns=monte_df_cols)
