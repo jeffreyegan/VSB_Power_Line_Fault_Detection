@@ -5,19 +5,13 @@ import time
 from datetime import datetime
 import pandas as pd
 import numpy as np
-import pyarrow.parquet as pq
-import scipy
-import pywt
-from statsmodels.robust import mad
-from scipy import fftpack
-#from numpy.fft import *
 import collections
 from matplotlib import pyplot as plt
 import seaborn as sns
 
 
 def load_feature_data(file_name):
-    df = pd.read_csv(filename)
+    df = pd.read_csv(file_name)
     return df
 
 def split_data(features, labels):
@@ -156,7 +150,8 @@ def vsb_models(filename):
     plt.title('Random Forest Classification - Performance vs Number of Estimators')
     plt.xlabel('Number of Estimators')
     plt.ylabel('Classifier Scores')
-    plt.savefig("performance_rf.png", bbox_inches='tight')
+    #plt.savefig("performance_rf.png", bbox_inches='tight')
+    plt.show()
 
 
 filename = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/train_features_dmey.csv"
