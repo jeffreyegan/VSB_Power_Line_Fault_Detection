@@ -7,6 +7,7 @@ import numpy as np
 import pyarrow.parquet as pq
 import scipy
 import pywt
+import peakutils
 from statsmodels.robust import mad
 from scipy import fftpack
 #from numpy.fft import *
@@ -105,12 +106,43 @@ def calculate_crossings(signal):
     no_mean_crossings = len(mean_crossing_indices)
     return [no_zero_crossings, no_mean_crossings]  # TODO no_mean_crossings a very promising feature!!!!
 
+def calculate_peak_widths(peak_idxs):
+    tmp_w = 1
+    widths = []
+    for idx in range(1,len(peak_idxs)):
+        if peak_idxs[idx]-peak_idxs[idx-1] == 1:
+            tmp_w +=1
+        else:
+            widths.append(tmp_w)
+            tmp_w = 1
+    widths.append(tmp_w)
+    min_width = min(np.array(widths))
+    max_width = max(np.array(widths))
+    mean_width = np.nanamean(np.array(widths))
+    num_true_peaks = len(widths)
+
+    return min_width, max_width, mean_width, num_true_peaks
+
+def calculate_peaks(signal):
+    peak_indexes = peakutils.indexes(signal, thres=np.nanmean(signal)+3*np.nanstd(signal), min_dist=0)  # where peaks are
+    peak_values = signal[peak_indexes]
+
+    num_detect_peak = len(peak_indexes)
+    min_height = min(peak_values)
+    max_height = max(peak_values)
+    mean_height = np.nanamean(peak_values)
+
+    min_width, max_width, mean_width, num_true_peaks = calculate_peak_widths(peak_indexes)
+
+    return [min_height, max_height, mean_height, min_width, max_width, mean_width, num_detect_peak, num_true_peaks]
+
 # Extract features from the signal and build an array of them
 def get_features(signal):
     entropy = calculate_entropy(signal)
     crossings = calculate_crossings(signal)
     statistics = calculate_statistics(signal)
-    return [entropy] + crossings + statistics
+    peaks = calculate_peaks(signal)
+    return [entropy] + crossings + statistics + peaks
 
 # Store Extracted Features in Features Dataframe for input to machine learning models
 def store_features(df, features):
@@ -126,7 +158,7 @@ def classifier_vote():
     return classification
 
 def create_feature_matrix():
-    feature_matrix_columns = ["signal_id", "measurement_id", "entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "fault"]
+    feature_matrix_columns = ["signal_id", "measurement_id", "entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks", "fault"]
     feature_matrix = pd.DataFrame([], columns=feature_matrix_columns)
     return feature_matrix, feature_matrix_columns
 
@@ -195,8 +227,8 @@ Reverse_Biorthogonal = ["rbio1.1", "rbio1.3", "rbio1.5", "rbio1.2", "rbio1.4", "
 #dwt_types = Discrete_Meyer + Coiflet
 #dwt_types = Daubechies[1:4] + Symlets[1:4]
 #dwt_types = Daubechies[5:6] 
-dwt_types = Daubechies[4:5] + Daubechies[6:13] 
-
+#dwt_types = Daubechies[4:5] + Daubechies[6:10] 
+dwt_types = ["db4", "db5"]
 
 # Data Source
 source_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/train.parquet"
