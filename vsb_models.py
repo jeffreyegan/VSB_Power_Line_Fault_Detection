@@ -14,10 +14,10 @@ def load_feature_data(file_name):
     df = pd.read_csv(file_name)
     return df
 
-def split_data(features, labels):
+def split_data(features, labels, seed=1):
     from sklearn.model_selection import train_test_split
     # Using standard split of 80-20 training to testing data split ratio and fixing random_state=1 for repeatability
-    x_train, x_test, y_train, y_test = train_test_split(features, labels, train_size=0.8, test_size=0.2, random_state=1)
+    x_train, x_test, y_train, y_test = train_test_split(features, labels, train_size=0.8, test_size=0.2, random_state=seed)
     return x_train, x_test, y_train, y_test
 
 def score_classifier(truth, predictions):
@@ -34,6 +34,22 @@ def score_classifier(truth, predictions):
     #print(f1_score(truth, predictions))
     return m_accuracy, m_recall, m_precision, m_f1, c_matrix
 
+def matthews_corr_coef(c_matrix):  # Use 2x2 Confusion Matrix to Calculate Matthews Correlation Coefficient
+    #TP = c_matrix[0][0]  # True Positives
+    #TN = c_matrix[0][1]  # True Negavitves
+    #FP = c_matrix[1][0]  # False Positives
+    #FN = c_matrix[1][1]  # False Negatives
+    #print(c_matrix)
+
+    TP = c_matrix[1][1]  # True Positives
+    TN = c_matrix[0][0]  # True Negavitves
+    FP = c_matrix[1][0]  # False Positives
+    FN = c_matrix[0][1]  # False Negatives
+
+    MCC = ((TP * TN) - (FP * FN)) / np.sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN))
+    #print(MCC)
+    return MCC
+
 
 def classification_k_nearest(features, labels, k):
     from sklearn.neighbors import KNeighborsClassifier
@@ -43,8 +59,9 @@ def classification_k_nearest(features, labels, k):
     classifier.fit(x_train, y_train.values.ravel())
     y_predicted = classifier.predict(x_test)
     m_accuracy, m_recall, m_precision, m_f1, c_matrix = score_classifier(y_test, y_predicted.ravel())
-    print('Time elapsed: '+str(time.time() - time_in)+'')
-    return m_accuracy, m_recall, m_precision, m_f1, c_matrix
+    m_mcc = matthews_corr_coef(c_matrix)
+    #print('Time elapsed: '+str(time.time() - time_in)+'')
+    return m_accuracy, m_recall, m_precision, m_f1, m_mcc
 
 
 def classification_support_vector_machine(features, labels, kernel_value, gamma_value):
@@ -56,45 +73,45 @@ def classification_support_vector_machine(features, labels, kernel_value, gamma_
     y_predicted = classifier.predict(x_test)
     m_accuracy, m_recall, m_precision, m_f1, c_matrix = score_classifier(y_test, y_predicted.ravel())
     #score = classifier.score(x_test, y_test)
-    print('Time elapsed: ' + str(time.time() - time_in) + '')
-    return m_accuracy, m_recall, m_precision, m_f1, c_matrix
+    m_mcc = matthews_corr_coef(c_matrix)
+    #print('Time elapsed: ' + str(time.time() - time_in) + '')
+    return m_accuracy, m_recall, m_precision, m_f1, m_mcc
 
 
-def classification_random_forest(features, labels, n_value):
+def classification_random_forest(features, labels, n_value, random_seed):
     from sklearn.ensemble import RandomForestClassifier
-    x_train, x_test, y_train, y_test = split_data(features, labels)
-    time_in = time.time()
+    x_train, x_test, y_train, y_test = split_data(features, labels, random_seed)
     classifier = RandomForestClassifier(n_estimators=n_value)  # Create Gaussian Classifier
     classifier.fit(x_train, y_train.values.ravel())
     y_predicted = classifier.predict(x_test)
     m_accuracy, m_recall, m_precision, m_f1, c_matrix = score_classifier(y_test, y_predicted.ravel())
-    print('Time elapsed: '+str(time.time() - time_in)+'')
-    return m_accuracy, m_recall, m_precision, m_f1, c_matrix
+    m_mcc = matthews_corr_coef(c_matrix)
+    return m_accuracy, m_recall, m_precision, m_f1, m_mcc
 
 
 def vsb_models(filename):
     df = load_feature_data(filename)
-
-    features = df[["entropy", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings"]]
+    features = df[["entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks"]]
     labels = df[["fault"]]
 
     accuracy = []
     recall = []
     precision = []
     f1 = []
-    k_values = list(range(3,25,2))
+    mcc = []
+    k_values = list(range(3,27,2))
     for k in k_values:
-        m_accuracy, m_recall, m_precision, m_f1, c_matrix = classification_k_nearest(features, labels, k)
-        print(c_matrix)
+        m_accuracy, m_recall, m_precision, m_f1, m_mcc = classification_k_nearest(features, labels, k)
         accuracy.append(m_accuracy)
         recall.append(m_recall)
         precision.append(m_precision)
         f1.append(m_f1)
+        mcc.append(m_mcc)
 
     plot_labels = ['Accuracy', 'Recall', 'Precision', 'F1 Score']
     blues = ["#66D7EB", "#51ACC5", "#3E849E", "#2C5F78", "#1C3D52", "#0E1E2B"]
 
-    fig=plt.figure(figsize=(12, 8), dpi= 80, facecolor='w', edgecolor='k')
+    fig=plt.figure(figsize=(14, 8), dpi= 120, facecolor='w', edgecolor='k')
     plt.plot(k_values, accuracy, '-', label=plot_labels[0], color=blues[0])
     plt.plot(k_values, recall, '--', label=plot_labels[1], color=blues[1])
     plt.plot(k_values, precision, '-.', label=plot_labels[2], color=blues[2])
@@ -105,20 +122,31 @@ def vsb_models(filename):
     plt.ylabel('Classifier Scores')
     plt.savefig("performance_knn.png", bbox_inches='tight')
 
+    fig=plt.figure(figsize=(14, 8), dpi= 120, facecolor='w', edgecolor='k')
+    plt.plot(k_values, mcc, '-', label="Matthews Correlation Coefficient", color=blues[1])
+    plt.legend(loc='lower right')
+    plt.title('K Nearest Neighbors Classification - Matthews Correlation Coefficient Performance vs k Value')
+    plt.xlabel('k Value')
+    plt.ylabel('Matthews Correlation Coefficient')
+    plt.savefig("mcc_knn.png", bbox_inches='tight')
+
 
     accuracy = []
     recall = []
     precision = []
     f1 = []
-    gamma_values = np.linspace(0.05, 500, 500)
+    mcc = []
+    gamma_values = np.linspace(0.05, 100, 500)
     kernel_value = "rbf"
     for gamma in gamma_values:
-        m_accuracy, m_recall, m_precision, m_f1, c_matrix = classification_support_vector_machine(features, labels, kernel_value, gamma)
+        print(gamma)
+        m_accuracy, m_recall, m_precision, m_f1, m_mcc = classification_support_vector_machine(features, labels, kernel_value, gamma)
         accuracy.append(m_accuracy)
         recall.append(m_recall)
         precision.append(m_precision)
         f1.append(m_f1)
-    fig=plt.figure(figsize=(12, 8), dpi= 80, facecolor='w', edgecolor='k')
+        mcc.append(m_mcc)
+    fig=plt.figure(figsize=(14, 8), dpi= 120, facecolor='w', edgecolor='k')
     plt.plot(gamma_values, accuracy, '-', label=plot_labels[0], color=blues[0])
     plt.plot(gamma_values, recall, '--', label=plot_labels[1], color=blues[1])
     plt.plot(gamma_values, precision, '-.', label=plot_labels[2], color=blues[2])
@@ -129,19 +157,31 @@ def vsb_models(filename):
     plt.ylabel('Classifier Scores')
     plt.savefig("performance_svm.png", bbox_inches='tight')
 
+    fig=plt.figure(figsize=(14, 8), dpi= 120, facecolor='w', edgecolor='k')
+    plt.plot(gamma_values, mcc, '-', label="Matthews Correlation Coefficient", color=blues[1])
+    plt.legend(loc='lower right')
+    plt.title('K Nearest Neighbors Classification - Matthews Correlation Coefficient Performance vs Gamma')
+    plt.xlabel('Gamma')
+    plt.ylabel('Matthews Correlation Coefficient')
+    plt.savefig("mcc_svm.png", bbox_inches='tight')
+
 
     accuracy = []
     recall = []
     precision = []
     f1 = []
+    mcc = []
     n_values = list(range(5,250,5))
+    seed = 2019
     for n_value in n_values:
-        m_accuracy, m_recall, m_precision, m_f1, c_matrix = classification_random_forest(features, labels, n_value)
+        print(n_value)
+        m_accuracy, m_recall, m_precision, m_f1, m_mcc = classification_random_forest(features, labels, n_value, seed)
         accuracy.append(m_accuracy)
         recall.append(m_recall)
         precision.append(m_precision)
         f1.append(m_f1)
-    fig=plt.figure(figsize=(12, 8), dpi= 80, facecolor='w', edgecolor='k')
+        mcc.append(m_mcc)
+    fig=plt.figure(figsize=(14, 8), dpi= 120, facecolor='w', edgecolor='k')
     plt.plot(n_values, accuracy, '-', label=plot_labels[0], color=blues[0])
     plt.plot(n_values, recall, '--', label=plot_labels[1], color=blues[1])
     plt.plot(n_values, precision, '-.', label=plot_labels[2], color=blues[2])
@@ -150,9 +190,16 @@ def vsb_models(filename):
     plt.title('Random Forest Classification - Performance vs Number of Estimators')
     plt.xlabel('Number of Estimators')
     plt.ylabel('Classifier Scores')
-    #plt.savefig("performance_rf.png", bbox_inches='tight')
-    plt.show()
+    plt.savefig("performance_rf.png", bbox_inches='tight')
+
+    fig=plt.figure(figsize=(14, 8), dpi= 120, facecolor='w', edgecolor='k')
+    plt.plot(n_values, mcc, '-', label="Matthews Correlation Coefficient", color=blues[1])
+    plt.legend(loc='lower right')
+    plt.title('Random Forest Classification - Matthews Correlation Coefficient Performance vs Number of Estimators')
+    plt.xlabel('Number of Estimators')
+    plt.ylabel('Matthews Correlation Coefficient')
+    plt.savefig("mcc_rf.png", bbox_inches='tight')
 
 
-filename = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/train_features_dmey.csv"
+filename = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/train_features_db4.csv"
 vsb_models(filename)

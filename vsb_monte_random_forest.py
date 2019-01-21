@@ -55,9 +55,9 @@ def classification_random_forest(features, labels, n_value, random_seed):
 
 
 # Monte Carlo Trial Random Seeds
-random_states = list(range(1, 51, 5))  # 10 seeds
-num_estimators_range = [15, 20, 25, 30]
-num_estimators_range = [50, 100, 500, 1000]
+random_states = list(range(1, 2019, 20))  # 10 seeds
+num_estimators_range = [15, 20, 25, 30, 35, 45, 50]
+#num_estimators_range = [50, 100, 500, 1000]
 
 # Discrete Wavelet Transform Types
 Discrete_Meyer = ["dmey"]
@@ -78,7 +78,7 @@ for dwt in dwt_types:
     print("Starting monte carlo trials for the "+dwt+" transform at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     for number_estimators in num_estimators_range:
         for seed in random_states:
-            file_name = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/pre_peak_processing/train_features_"+dwt+".csv"
+            file_name = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/train_features_"+dwt+".csv"
             file_name = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/train_features_"+dwt+".csv"
             df = load_feature_data(file_name)
             features = df[["entropy", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings"]]
