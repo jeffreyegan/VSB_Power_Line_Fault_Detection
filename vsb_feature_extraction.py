@@ -115,11 +115,11 @@ def calculate_peak_widths(peak_idxs):
     return min_width, max_width, mean_width, num_true_peaks
 
 def calculate_peaks(signal):
-    
     # Detect all Peaks
     peaks = peakutils.indexes(1.0*(signal), thres=0.55, min_dist=0)
     valleys = peakutils.indexes(-1.0*(signal), thres=0.55, min_dist=0) 
     peak_indexes = np.sort(np.concatenate((peaks, valleys)))
+    print("Found "+str(len(peak_indexes))+ "peaks to process.")
 
     # Cancel Carona Discharge False Peak Pulse Trains
     false_peak_indexes = []
@@ -139,14 +139,16 @@ def calculate_peaks(signal):
                     scrub = list(x for x in range(len(peak_indexes)) if peak_indexes[pk] <= peak_indexes[x] <= peak_indexes[pk]+max_pulse_train)
                     for x in scrub:
                         false_peak_indexes.append(peak_indexes[x])
+    print("Found "+str(len(false_peak_indexes))+ "carona discharge peaks to reject.")
     
     # Cancel High Amplitude False Peaks
     peaks = peakutils.indexes(1.0*(signal), thres=0.80, min_dist=0)
     valleys = peakutils.indexes(-1.0*(signal), thres=0.80, min_dist=0) 
     hi_amp_pk_indexes = np.sort(np.concatenate((peaks, valleys)))
     for pk_idx in hi_amp_pk_indexes:
-        if not peak in false_peak_indexes:
+        if not pk_idx in false_peak_indexes:
             false_peak_indexes.append(pk_idx)
+    print("Found "+str(len(hi_amp_pk_indexes))+ "high amplitude peaks to reject.")
 
     # Calcel Peaks Flagged as False, Find True Preaks
     true_peak_indexes = list(set(peak_indexes) - set(false_peak_indexes))
@@ -184,6 +186,9 @@ def vsb_feature_extraction(source_meta, source_data, data_type, dwt_type):
     feature_matrix, feature_matrix_columns = create_feature_matrix()  # create new feature matrix data frame
 
     for measurement_id in range(min_id, max_id+1):
+    if measurement_id%1 == 0:
+            print("Now processing measurement_id: "+str(measurement_id)+" at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
         measurement_meta_df = df_meta[df_meta["id_measurement"]==measurement_id]
         signal_ids = measurement_meta_df.signal_id.tolist()  # example [8709, 8710, 8711]
         #print(signal_ids)  # example [8709, 8710, 8711]
@@ -224,8 +229,7 @@ def vsb_feature_extraction(source_meta, source_data, data_type, dwt_type):
         feature_matrix = feature_matrix.append(phase1_features_df, ignore_index=True)
         feature_matrix = feature_matrix.append(phase2_features_df, ignore_index=True)
         
-        if measurement_id%100 == 0:
-            print("Now processing measurement_id: "+str(measurement_id)+" at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        
 
     # After processing and extracting features from each signal in the test set, save feature matrix
     feature_matrix.to_csv("extracted_features/"+data_type+"_features_doc_"+dwt_type+".csv", sep=",")

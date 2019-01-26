@@ -18,21 +18,6 @@ def split_data(features, labels, random_state_value):
     x_train, x_test, y_train, y_test = train_test_split(features, labels, train_size=0.8, test_size=0.2, random_state=random_state_value)
     return x_train, x_test, y_train, y_test
 
-def matthews_corr_coef(c_matrix):  # Use 2x2 Confusion Matrix to Calculate Matthews Correlation Coefficient
-    #TP = c_matrix[0][0]  # True Positives
-    #TN = c_matrix[0][1]  # True Negavitves
-    #FP = c_matrix[1][0]  # False Positives
-    #FN = c_matrix[1][1]  # False Negatives
-
-    TP = c_matrix[1][1]  # True Positives
-    TN = c_matrix[0][0]  # True Negavitves
-    FP = c_matrix[1][0]  # False Positives
-    FN = c_matrix[0][1]  # False Negatives
-
-    MCC = ((TP * TN) - (FP * FN)) / np.sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN))
-    print(MCC)
-    return MCC
-
 def score_classifier(truth, predictions):
     from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
     from sklearn.metrics import confusion_matrix
@@ -51,8 +36,6 @@ def classification_random_forest(features, labels, n_value, random_seed):
     classifier = RandomForestClassifier(n_estimators=n_value)  # Create Gaussian Classifier
     classifier.fit(x_train, y_train.values.ravel())
     y_predicted = classifier.predict(x_test)
-    m_accuracy, m_recall, m_precision, m_f1, c_matrix, m_mcc = score_classifier(y_test, y_predicted.ravel())
-    #mcc = matthews_corr_coef(c_matrix)
     print(m_mcc)
     return m_accuracy, m_recall, m_precision, m_f1, m_mcc
 
