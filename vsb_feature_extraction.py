@@ -115,9 +115,46 @@ def calculate_peak_widths(peak_idxs):
     return min_width, max_width, mean_width, num_true_peaks
 
 def calculate_peaks(signal):
-    peak_indexes = peakutils.indexes(signal, thres=0.5, min_dist=1)  # where peaks are
-    peak_values = signal[peak_indexes]
-    num_detect_peak = len(peak_indexes)
+    
+    # Detect all Peaks
+    peaks = peakutils.indexes(1.0*(signal), thres=0.55, min_dist=0)
+    valleys = peakutils.indexes(-1.0*(signal), thres=0.55, min_dist=0) 
+    peak_indexes = np.sort(np.concatenate((peaks, valleys)))
+
+    # Cancel Carona Discharge False Peak Pulse Trains
+    false_peak_indexes = []
+    max_sym_distance = 10  #
+    max_pulse_train = 500  # 
+    max_height_ratio = 0.25  # 
+    for pk in range(len(peak_indexes)-1):
+        if not peak_indexes[pk] in false_peak_indexes:
+            if (signal[peak_indexes[pk]] > 0 and signal[peak_indexes[pk+1]] < 0) and (peak_indexes[pk+1] - peak_indexes[pk]) < max_sym_distance:
+                if min(abs(signal[peak_indexes[pk]]),abs(signal[peak_indexes[pk+1]]))/max(abs(signal[peak_indexes[pk]]),abs(signal[peak_indexes[pk+1]])) > max_height_ratio:
+                    scrub = list(x for x in range(len(peak_indexes)) if peak_indexes[pk] <= peak_indexes[x] <= peak_indexes[pk]+max_pulse_train)
+                    for x in scrub:
+                        false_peak_indexes.append(peak_indexes[x])
+                    
+            if (signal[peak_indexes[pk]] < 0 and signal[peak_indexes[pk+1]] > 0) and (peak_indexes[pk+1] - peak_indexes[pk]) < max_sym_distance:
+                if min(abs(signal[peak_indexes[pk]]),abs(signal[peak_indexes[pk+1]]))/max(abs(signal[peak_indexes[pk]]),abs(signal[peak_indexes[pk+1]])) > max_height_ratio:
+                    scrub = list(x for x in range(len(peak_indexes)) if peak_indexes[pk] <= peak_indexes[x] <= peak_indexes[pk]+max_pulse_train)
+                    for x in scrub:
+                        false_peak_indexes.append(peak_indexes[x])
+    
+    # Cancel High Amplitude False Peaks
+    peaks = peakutils.indexes(1.0*(signal), thres=0.80, min_dist=0)
+    valleys = peakutils.indexes(-1.0*(signal), thres=0.80, min_dist=0) 
+    hi_amp_pk_indexes = np.sort(np.concatenate((peaks, valleys)))
+    for pk_idx in hi_amp_pk_indexes:
+        if not peak in false_peak_indexes:
+            false_peak_indexes.append(pk_idx)
+
+    # Calcel Peaks Flagged as False, Find True Preaks
+    true_peak_indexes = list(set(peak_indexes) - set(false_peak_indexes))
+    true_peak_indexes.sort()
+
+    # Peak Characteristics on True Peaks
+    peak_values = signal[true_peak_indexes]
+    num_detect_peak = len(true_peak_indexes)
     if num_detect_peak > 0:
         min_height = min(peak_values)
         max_height = max(peak_values)
@@ -135,19 +172,6 @@ def get_features(signal):
     statistics = calculate_statistics(signal)
     peaks = calculate_peaks(signal)
     return [entropy] + crossings + statistics + peaks
-
-# Store Extracted Features in Features Dataframe for input to machine learning models
-def store_features(df, features):
-    phase0_features = get_features()
-    phase1_features = get_features()
-    phase2_features = get_features()
-    features = phase0_features + phase1_features + phase2_features
-    # TODO Complete, and is it best to seperate features
-    return df
-
-def classifier_vote():
-    # TODO for three phase signals, classify each idependently, then have a best of 3 voting mechanism to classify the complete sample
-    return classification
 
 def create_feature_matrix():
     feature_matrix_columns = ["signal_id", "measurement_id", "entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks", "fault"]
@@ -200,11 +224,11 @@ def vsb_feature_extraction(source_meta, source_data, data_type, dwt_type):
         feature_matrix = feature_matrix.append(phase1_features_df, ignore_index=True)
         feature_matrix = feature_matrix.append(phase2_features_df, ignore_index=True)
         
-        if measurement_id%500 == 0:
+        if measurement_id%100 == 0:
             print("Now processing measurement_id: "+str(measurement_id)+" at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     # After processing and extracting features from each signal in the test set, save feature matrix
-    feature_matrix.to_csv("extracted_features/"+data_type+"_features_"+dwt_type+".csv", sep=",")
+    feature_matrix.to_csv("extracted_features/"+data_type+"_features_doc_"+dwt_type+".csv", sep=",")
 
 
 
@@ -222,18 +246,21 @@ Reverse_Biorthogonal = ["rbio1.1", "rbio1.3", "rbio1.5", "rbio1.2", "rbio1.4", "
 #dwt_types = Daubechies[5:6] 
 #dwt_types = Daubechies[4:5] + Daubechies[6:10] 
 
-# Advanced Processing Set
+# Advanced Processing Set 1.0
 #dwt_types = ["db4"]
-dwt_types = ["dmey", "sym2", "coif2", "db5", "db13", "sym5"]
+#dwt_types = ["dmey", "sym2", "coif2", "db5", "db13", "sym5"]
+
+# Advanced Signal Processing 2.0
+dwt_types = ["db4"]
 
 # Data Source
 source_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/train.parquet"
 source_meta = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/metadata_train.csv"
 data_type = "train"
 
-source_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/test.parquet"
-source_meta = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/metadata_test.csv"
-data_type = "test"
+#source_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/test.parquet"
+#source_meta = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/metadata_test.csv"
+#data_type = "test"
 
 for dwt_type in dwt_types:
     print("Starting signal processing and feature extraction on "+data_type+" data with the "+dwt_type+" transform at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))

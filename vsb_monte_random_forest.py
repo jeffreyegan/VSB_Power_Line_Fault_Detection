@@ -36,12 +36,14 @@ def matthews_corr_coef(c_matrix):  # Use 2x2 Confusion Matrix to Calculate Matth
 def score_classifier(truth, predictions):
     from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
     from sklearn.metrics import confusion_matrix
+    from sklearn.metrics import matthews_corrcoef
     m_accuracy = accuracy_score(truth, predictions)
     m_recall = recall_score(truth, predictions)
     m_precision = precision_score(truth, predictions)
     m_f1 = f1_score(truth, predictions)
     c_matrix = confusion_matrix(truth, predictions)
-    return m_accuracy, m_recall, m_precision, m_f1, c_matrix
+    m_mcc = matthews_corrcoef(truth, predictions)
+    return m_accuracy, m_recall, m_precision, m_f1, c_matrix, m_mcc
 
 def classification_random_forest(features, labels, n_value, random_seed):
     from sklearn.ensemble import RandomForestClassifier
@@ -49,9 +51,10 @@ def classification_random_forest(features, labels, n_value, random_seed):
     classifier = RandomForestClassifier(n_estimators=n_value)  # Create Gaussian Classifier
     classifier.fit(x_train, y_train.values.ravel())
     y_predicted = classifier.predict(x_test)
-    m_accuracy, m_recall, m_precision, m_f1, c_matrix = score_classifier(y_test, y_predicted.ravel())
-    mcc = matthews_corr_coef(c_matrix)
-    return m_accuracy, m_recall, m_precision, m_f1, mcc
+    m_accuracy, m_recall, m_precision, m_f1, c_matrix, m_mcc = score_classifier(y_test, y_predicted.ravel())
+    #mcc = matthews_corr_coef(c_matrix)
+    print(m_mcc)
+    return m_accuracy, m_recall, m_precision, m_f1, m_mcc
 
 
 # Monte Carlo Trial Random Seeds
