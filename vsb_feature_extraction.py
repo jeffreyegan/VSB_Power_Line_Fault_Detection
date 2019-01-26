@@ -33,7 +33,7 @@ def load_sample(source_data, idx_start, idx_stop):
 
 
 def discete_wavelet_transform(signal, wavelet="db4", level=1):  # Discrete Wavelet Transform on the Signal to Remove Noise
-    coeff = pywt.wavedec( signal, wavelet, mode="per")  # calculate the wavelet coefficients
+    coeff = pywt.wavedec(signal, wavelet, mode="per")  # calculate the wavelet coefficients
     sigma = mad(coeff[-level])  # calculate a threshold
     uthresh = sigma * np.sqrt(2*np.log(len(signal)))  # changing this threshold also changes the behavior, but hasn't been adjusted much
     coeff[1:] = (pywt.threshold(i, value=uthresh, mode="soft") for i in coeff[1:])
@@ -74,11 +74,9 @@ def calculate_crossings(signal):
     return [no_zero_crossings, no_mean_crossings]  # TODO no_mean_crossings a very promising feature!!!!
 
 
-def find_all_peaks(signal):
-    thresh = 0.55
-    min_d = 2
-    peaks = peakutils.indexes(1.0*(signal), thres=thresh, min_dist=min_d)
-    valleys = peakutils.indexes(-1.0*(signal), thres=thresh, min_dist=min_d)
+def find_all_peaks(signal, threshold=0.7, min_distance=0):
+    peaks = peakutils.indexes(1.0*(signal), thres=threshold, min_dist=min_distance)
+    valleys = peakutils.indexes(-1.0*(signal), thres=threshold, min_dist=min_distance)
     peak_indexes = np.sort(np.concatenate((peaks, valleys)))
     return peak_indexes
 
@@ -150,9 +148,9 @@ def calculate_peaks(signal, true_peak_indexes):  # Peak Characteristics on True 
         return [0, 0, 0, 0, 0, 0, 0, 0]
 
 
-def get_features(signal, signal_id): # Extract features from the signal and build an array of them
-    peak_indexes = find_all_peaks(signal)
-    print("Now processing signal_id: "+str(signal_id)+" with "+str(len(peak_indexes))+" detected peaks at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+def get_features(signal, signal_id, threshold, min_distance): # Extract features from the signal and build an array of them
+    peak_indexes = find_all_peaks(signal, threshold, min_distance)
+    print("Now processing signal_id: "+str(signal_id)+" with peak detection threshold at "+str(threshold)+" yielding "+str(len(peak_indexes))+" peaks at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     false_peak_indexes = cancel_false_peaks(signal, peak_indexes)
     false_peak_indexes = cancel_high_amp_peaks(signal, peak_indexes, false_peak_indexes)
     true_peak_indexes = cancel_flagged_peaks(peak_indexes, false_peak_indexes)
@@ -163,7 +161,7 @@ def get_features(signal, signal_id): # Extract features from the signal and buil
     return [entropy] + crossings + statistics + peaks
 
 
-def vsb_feature_extraction(source_meta, source_data, data_type, dwt_type):  
+def vsb_feature_extraction(source_meta, source_data, data_type, dwt_type, peak_threshold, peak_min_distance):  
     df_meta, min_id, max_id = load_metadata(source_meta)  # retrieve relevant meta data for training or test
     feature_matrix, feature_matrix_columns = create_feature_matrix()  # create new feature matrix data frame
 
@@ -172,7 +170,7 @@ def vsb_feature_extraction(source_meta, source_data, data_type, dwt_type):
         raw_signal = df_signal[str(signal_id)]  # Raw Signal from Data
         dwt_signal = discete_wavelet_transform(raw_signal, wavelet=dwt_type, level=1)  # Denoise the Raw Signal with Discrete Wavelet Transform       
         dwt_detrend_signal = detrend_signal(dwt_signal)  # Detrend the Transformed Signal to "Flatten" it
-        signal_features = get_features(dwt_detrend_signal, signal_id)  # Perform Feature Extraction on the Transformed, "Flattened" Signal
+        signal_features = get_features(dwt_detrend_signal, signal_id, peak_threshold, peak_min_distance)  # Perform Feature Extraction on the Transformed, "Flattened" Signal
         
         if data_type.lower() == "train":  # Stage Feature Array for Addition to Feature Matrix
             df_features = pd.DataFrame([[signal_id] + signal_features + [df_meta.target[df_meta.signal_id == signal_id].values[0]]], columns=feature_matrix_columns)
@@ -181,7 +179,7 @@ def vsb_feature_extraction(source_meta, source_data, data_type, dwt_type):
         feature_matrix = feature_matrix.append(df_features, ignore_index=True)  # Append Feature Matrix Data Frame
 
     # After processing and extracting features from each signal in the test set, save feature matrix
-    feature_matrix.to_csv("extracted_features/"+data_type+"_features_doc_"+dwt_type+".csv", sep=",")
+    feature_matrix.to_csv("extracted_features/"+data_type+"_features_thresh_"+str(peak_threshold)+"_"+dwt_type+".csv", sep=",")
 
 
 
@@ -194,7 +192,9 @@ Biorthogonal = ["bior1.1", "bior1.3", "bior1.5", "bior2.2", "bior2.4", "bior2.6"
 Reverse_Biorthogonal = ["rbio1.1", "rbio1.3", "rbio1.5", "rbio1.2", "rbio1.4", "rbio1.6", "rbio1.8", "rbio3.1", "rbio3.3", "rbio3.5", "rbio3.7", "rbio3.9", "rbio4.4", "rbio5.5", "rbio6.8"]
 
 
-dwt_types = ["db4"]  # Wavelets chosen for processing 
+dwt_type = "db4"  # Wavelets chosen for processing 
+thresholds = [0.71, 0.69, 0.67, 0.65, 0.63, 0.61]
+peak_min_distance = 0
 
 # Raw Data Sources
 source_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/test.parquet"
@@ -205,7 +205,7 @@ source_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/tr
 source_meta = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/metadata_train.csv"
 data_type = "train"
 
-for dwt_type in dwt_types:
-    print("Starting signal processing and feature extraction on "+data_type+" data with the "+dwt_type+" transform at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-    vsb_feature_extraction(source_meta, source_data, data_type, dwt_type)
+for peak_threshold in thresholds:
+    print("Starting signal processing and feature extraction on "+data_type+" data with the "+dwt_type+" transform and threshold = "+str(peak_threshold)+" at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    vsb_feature_extraction(source_meta, source_data, data_type, dwt_type, peak_threshold, peak_min_distance)
 print("Done! at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
