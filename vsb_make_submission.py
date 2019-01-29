@@ -26,7 +26,7 @@ def classification_random_forest_predict(model, x_test):
 dwt = "db4"
 number_estimators = 50
 
-training_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/train_features_"+dwt+".csv"
+training_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/train_features_thresh_0.71_"+dwt+".csv"
 df_train = pd.read_csv(training_data)
 features = df_train[["entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks"]]
 labels = df_train[["fault"]]
@@ -34,7 +34,7 @@ classifier = classification_random_forest_model(features, labels, number_estimat
 
 
 # Make Predictions
-test_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/test_features_"+dwt+".csv"
+test_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/test_features_thresh_0.71_"+dwt+".csv"
 test_meta = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/metadata_test.csv"
 df_test = pd.read_csv(test_data).drop(['Unnamed: 0'],axis=1)
 test_features = df_test[["entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks"]]

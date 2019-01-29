@@ -36,6 +36,8 @@ def classification_random_forest(features, labels, n_value, random_seed):
     classifier = RandomForestClassifier(n_estimators=n_value)  # Create Gaussian Classifier
     classifier.fit(x_train, y_train.values.ravel())
     y_predicted = classifier.predict(x_test)
+
+    m_accuracy, m_recall, m_precision, m_f1, c_matrix, m_mcc = score_classifier(y_test, y_predicted)
     print(m_mcc)
     return m_accuracy, m_recall, m_precision, m_f1, m_mcc
 
@@ -65,7 +67,7 @@ for dwt in dwt_types:
     for number_estimators in num_estimators_range:
         for seed in random_states:
             file_name = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/train_features_"+dwt+".csv"
-            file_name = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/train_features_"+dwt+".csv"
+            file_name = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/train_features_thresh_0.71_"+dwt+".csv"
             df = load_feature_data(file_name)
             features = df[["entropy", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings"]]
             features = df[["entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks"]]

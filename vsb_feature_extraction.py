@@ -201,9 +201,9 @@ source_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/te
 source_meta = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/metadata_test.csv"
 data_type = "test"
 
-source_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/train.parquet"
-source_meta = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/metadata_train.csv"
-data_type = "train"
+#source_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/train.parquet"
+#source_meta = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/source_data/metadata_train.csv"
+#data_type = "train"
 
 for peak_threshold in thresholds:
     print("Starting signal processing and feature extraction on "+data_type+" data with the "+dwt_type+" transform and threshold = "+str(peak_threshold)+" at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
