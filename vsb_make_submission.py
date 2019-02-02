@@ -118,7 +118,7 @@ df_test["fault"] = predicted_faults
 
 
 # Make Submission File
-submission_filename = "prediction_submission_"+peak_thresh+"_"+dwt+"_"+str(fault_detection_threshold)+"fdt_.csv"
+submission_filename = "submissions/prediction_submission_"+peak_thresh+"_"+dwt+"_"+str(fault_detection_threshold)+"fdt_.csv"
 
 f_o = open(submission_filename, "w+")
 f_o.write("signal_id,target\n")
