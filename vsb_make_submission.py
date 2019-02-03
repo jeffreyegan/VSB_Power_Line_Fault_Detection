@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 def split_data(features, labels, random_state_value=1):
     from sklearn.model_selection import train_test_split
     # Using standard split of 80-20 training to testing data split ratio and fixing random_state=1 for repeatability
-    x_train, x_test, y_train, y_test = train_test_split(features, labels, train_size=0.8, test_size=0.2, random_state=random_state_value)
+    x_train, x_test, y_train, y_test = train_test_split(features, labels, train_size=0.95, test_size=0.05, random_state=random_state_value)
     return x_train, x_test, y_train, y_test
 
 
@@ -23,6 +23,7 @@ def classification_light_gbm_model(df_train):
     x_train, x_test, y_train, y_test = split_data(df_train[features], df_train[target], 2019)  # Split Data
 
     print("preparing validation datasets")
+    xgdata = lgb.Dataset(df_train[features], df_train[target])
     xgtrain = lgb.Dataset(x_train, y_train)
     xgtest = lgb.Dataset(x_test, y_test)
 
@@ -112,7 +113,7 @@ classifier = classification_light_gbm_model(df_train)  # Light GBM
 test_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/test_features_thresh_"+peak_thresh+"_"+dwt+".csv"
 df_test = pd.read_csv(test_data).drop(['Unnamed: 0'],axis=1)
 
-fault_detection_threshold = 0.98
+fault_detection_threshold = 0.94
 predicted_faults = predict_light_gbm_model(classifier, df_test, fault_detection_threshold)
 df_test["fault"] = predicted_faults
 
