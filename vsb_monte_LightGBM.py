@@ -14,7 +14,7 @@ def load_feature_data(file_name):
 def split_data(features, labels, random_state_value=1):
     from sklearn.model_selection import train_test_split
     # Using standard split of 80-20 training to testing data split ratio and fixing random_state=1 for repeatability
-    x_train, x_test, y_train, y_test = train_test_split(features, labels, train_size=0.8, test_size=0.2, random_state=random_state_value)
+    x_train, x_test, y_train, y_test = train_test_split(features, labels, train_size=0.96, test_size=0.04, random_state=random_state_value)
     return x_train, x_test, y_train, y_test
 
 
@@ -24,14 +24,14 @@ def split_data(features, labels, random_state_value=1):
 def mcc(truth, predictions):
     return 'MCC', matthews_corrcoef(truth, predictions), True
 
-def run_light_gbm(data_file):
+def run_light_gbm(data_file, random_state_value):
     print('Loading data...')
     df = load_feature_data(data_file)
 
     features = ["entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks"]
     target = ["fault"]
 
-    x_train, x_test, y_train, y_test = split_data(df[features], df[target], 2019)  # Split Data
+    x_train, x_test, y_train, y_test = split_data(df[features], df[target], random_state_value)  # Split Data
 
     print("preparing validation datasets")
     xgtrain = lgb.Dataset(x_train, y_train)
@@ -54,7 +54,7 @@ def run_light_gbm(data_file):
         'max_depth': -1,  # -1 means no limit
         'min_child_samples': 20,  # Minimum number of data need in a child(min_data_in_leaf)
         'max_bin': 255,  # Number of bucketed bin for feature values
-        'subsample': 0.6,  # Subsample ratio of the training instance.
+        'subsample': 0.7,  # Subsample ratio of the training instance.
         'subsample_freq': 0,  # frequence of subsample, <=0 means no enable
         'colsample_bytree': 0.3,  # Subsample ratio of columns when constructing each tree.
         'min_child_weight': 5,  # Minimum sum of instance weight(hessian) needed in a child(leaf)
@@ -75,9 +75,9 @@ def run_light_gbm(data_file):
                      valid_sets=[xgtrain, xgtest], 
                      valid_names=['train','test'], 
                      evals_result=evals_results, 
-                     num_boost_round=500,
-                     early_stopping_rounds=30,
-                     verbose_eval=True, 
+                     num_boost_round=1000,
+                     early_stopping_rounds=50,
+                     verbose_eval=False, 
                      feval=None)
 
     
@@ -85,11 +85,11 @@ def run_light_gbm(data_file):
     y_pred_probs = classifier.predict(x_test, n_estimators)
 
     blues = ["#66D7EB", "#51ACC5", "#3E849E", "#2C5F78", "#1C3D52", "#0E1E2B"]
-    fig=plt.figure(figsize=(14, 8), dpi= 120, facecolor='w', edgecolor='k')
-    plt.hist(y_pred_probs, bins=100, color=blues[1])
-    plt.ylabel("Occurrences")
-    plt.xlabel("Probability of Assigning Fault")
-    plt.savefig("plots/fault_probs_lgbm.png", bbox_inches='tight')
+    #fig=plt.figure(figsize=(14, 8), dpi= 120, facecolor='w', edgecolor='k')
+    #plt.hist(y_pred_probs, bins=100, color=blues[1])
+    #plt.ylabel("Occurrences")
+    #plt.xlabel("Probability of Assigning Fault")
+    #plt.savefig("plots/fault_probs_lgbm.png", bbox_inches='tight')
 
     print("\nModel Report")
     print("n_estimators : ", n_estimators)
@@ -101,7 +101,7 @@ def run_light_gbm(data_file):
 
 def survey_thresholds(y_test, y_pred_probs):
 
-    thresholds = np.linspace(0.01, 1.00, 100)
+    thresholds = np.linspace(0.01, 0.99, 99)
     mcc = []
     for threshold in thresholds:
         y_predicted = []
@@ -111,16 +111,27 @@ def survey_thresholds(y_test, y_pred_probs):
             else:
                 y_predicted.append(0)
         mcc.append(matthews_corrcoef(y_test, y_predicted))
-        print("MCC: "+str(matthews_corrcoef(y_test, y_predicted)))
+        #print("MCC: "+str(matthews_corrcoef(y_test, y_predicted)))
 
     blues = ["#66D7EB", "#51ACC5", "#3E849E", "#2C5F78", "#1C3D52", "#0E1E2B"]
-    fig=plt.figure(figsize=(14, 8), dpi= 120, facecolor='w', edgecolor='k')
-    plt.plot(thresholds, mcc, color=blues[1])
-    plt.ylabel("Fault Classification Threshold")
-    plt.xlabel("Matthews Correlation Coefficient Score")
-    plt.savefig("plots/mcc_vs_faultThresh_lgbm.png", bbox_inches='tight')
+    #fig=plt.figure(figsize=(14, 8), dpi= 120, facecolor='w', edgecolor='k')
+    plt.plot(thresholds, mcc, color=blues[1], alpha=0.2)
+    #plt.ylabel("Fault Classification Threshold")
+    #plt.xlabel("Matthews Correlation Coefficient Score")
+    #plt.show()
+    #plt.savefig("plots/mcc_vs_faultThresh_lgbm.png", bbox_inches='tight')
+    return mcc
 
 
-data_file = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/"+"train_features_thresh_0.63_db4.csv"
-classifier, y_test, y_pred_probs = run_light_gbm(data_file)
-survey_thresholds(y_test, y_pred_probs)
+data_file = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/"+"train_features_thresh_0.61_db4.csv"
+
+fig=plt.figure(figsize=(14, 8), dpi= 120, facecolor='w', edgecolor='k')
+random_state_values = list(range(0,4000, 40))
+for random_state_value in random_state_values:
+    classifier, y_test, y_pred_probs = run_light_gbm(data_file, random_state_value)
+    mcc = survey_thresholds(y_test, y_pred_probs)
+    print("MCC for Fault Detection Threshold = 0.91: "+str(mcc[92]))
+plt.ylabel("Fault Classification Threshold")
+plt.xlabel("Matthews Correlation Coefficient Score")
+plt.title(str(len(random_state_values))+" runs, with a 96 percent split")
+plt.savefig("plots/mcc_vs_faultThresh_lgbm_96.png", bbox_inches='tight')
