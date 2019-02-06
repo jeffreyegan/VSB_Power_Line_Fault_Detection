@@ -1,0 +1,21 @@
+manually inspect all positive data samples in plot view with peak detection
+
+compare with a robust variety of other samples
+
+clean up initial peak indexes in peak detection
+
+
+revisit the peak cancelors 
+- how are high amp peaks chosen.... manual inspection may yield a hard limit to use on DWT sigs vice a value on baseline which could be insignificant on good sigs
+- revist peak width calcs
+- revisit / document false peaks (mirrors?) in code
+
+pulse train cancellation may not be correct
+
+rerun feature extraction for train (and test why not?)
+
+rerun analysis with varying train test split monte carlos with new extracted features to see resilience against cherry picking
+
+goal is consistent MCC > 0.5 for next submission
+
+work in VSB_Final Notebook and elsewhere?
