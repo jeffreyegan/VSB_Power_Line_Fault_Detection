@@ -2,7 +2,7 @@ manually inspect all positive data samples in plot view with peak detection
 
 compare with a robust variety of other samples
 
-clean up initial peak indexes in peak detection
+#clean up initial peak indexes in peak detection
 
 
 revisit the peak cancelors 
@@ -11,6 +11,23 @@ revisit the peak cancelors
 - revisit / document false peaks (mirrors?) in code
 
 pulse train cancellation may not be correct
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 rerun feature extraction for train (and test why not?)
 

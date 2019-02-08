@@ -76,9 +76,9 @@ def calculate_crossings(signal):
 
 def find_all_peaks(signal, threshold=0.7, min_distance=0):
     #peaks = peakutils.indexes(1.0*(signal), thres=threshold, min_dist=min_distance)
-    peaks = np.argwhere(signal > 1.0*threshold).tolist()
+    peaks = np.argwhere(signal > 1.0*threshold)
     #valleys = peakutils.indexes(-1.0*(signal), thres=threshold, min_dist=min_distance)
-    valleys = np.array(np.argwhere(signal < -1.0*threshold)).tolist()
+    valleys = np.array(np.argwhere(signal < -1.0*threshold))
     pois = np.sort(np.concatenate((peaks, valleys)))
     peak_indexes = []
     for pk in pois:
@@ -127,9 +127,9 @@ def cancel_false_peaks(signal, peak_indexes):
 def cancel_high_amp_peaks(signal, peak_indexes, false_peak_indexes):
     threshold = 40  # amplitude threshld for determining high amplitude peaks for cancellation
     #peaks = peakutils.indexes(1.0*(signal), thres=0.80, min_dist=0)
-    peaks = np.argwhere(signal > 1.0*threshold).tolist()
+    peaks = np.argwhere(signal > 1.0*threshold)
     #valleys = peakutils.indexes(-1.0*(signal), thres=0.80, min_dist=0)
-    valleys = np.argwhere(signal < -1.0*threshold).tolist()
+    valleys = np.argwhere(signal < -1.0*threshold)
     hi_amp_pk_indexes = np.sort(np.concatenate((peaks, valleys)))
     for pk_idx in hi_amp_pk_indexes:
         if not pk_idx[0] in false_peak_indexes:
@@ -164,10 +164,10 @@ def get_features(signal, signal_id, threshold, min_distance): # Extract features
     true_peak_indexes = cancel_flagged_peaks(peak_indexes, false_peak_indexes)
 
     entropy = calculate_entropy(signal)
-    crossings = calculate_crossings(signal)
     statistics = calculate_statistics(signal)
+    crossings = calculate_crossings(signal)
     peaks = calculate_peaks(signal, true_peak_indexes)
-    return [entropy] + crossings + statistics + peaks
+    return [entropy] + statistics + crossings + peaks
 
 
 def vsb_feature_extraction(source_meta, source_data, data_type, dwt_type, peak_threshold, peak_min_distance):  
