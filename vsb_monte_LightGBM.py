@@ -14,7 +14,7 @@ def load_feature_data(file_name):
 def split_data(features, labels, random_state_value=1):
     from sklearn.model_selection import train_test_split
     # Using standard split of 80-20 training to testing data split ratio and fixing random_state=1 for repeatability
-    x_train, x_test, y_train, y_test = train_test_split(features, labels, train_size=0.96, test_size=0.04, random_state=random_state_value)
+    x_train, x_test, y_train, y_test = train_test_split(features, labels, train_size=0.95, test_size=0.05, random_state=random_state_value)
     return x_train, x_test, y_train, y_test
 
 
@@ -123,7 +123,7 @@ def survey_thresholds(y_test, y_pred_probs):
     return mcc
 
 
-data_file = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/"+"train_features_thresh_0.61_db4.csv"
+data_file = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/"+"train_features_thresh_5.0_db4.csv"
 
 fig=plt.figure(figsize=(14, 8), dpi= 120, facecolor='w', edgecolor='k')
 random_state_values = list(range(0,4000, 40))
@@ -131,7 +131,7 @@ for random_state_value in random_state_values:
     classifier, y_test, y_pred_probs = run_light_gbm(data_file, random_state_value)
     mcc = survey_thresholds(y_test, y_pred_probs)
     print("MCC for Fault Detection Threshold = 0.91: "+str(mcc[92]))
-plt.ylabel("Fault Classification Threshold")
-plt.xlabel("Matthews Correlation Coefficient Score")
-plt.title(str(len(random_state_values))+" runs, with a 96 percent split")
-plt.savefig("plots/mcc_vs_faultThresh_lgbm_96.png", bbox_inches='tight')
+plt.xlabel("Fault Classification Threshold")
+plt.ylabel("Matthews Correlation Coefficient")
+plt.title("Peak Detection Threshold : 5.0 , "+str(len(random_state_values))+" Runs with 95% Training Data")
+plt.savefig("plots/mcc_vs_faultThresh_lgbm_newPeaks5.0_split95.png", bbox_inches='tight')
