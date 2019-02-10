@@ -10,6 +10,8 @@ from statsmodels.robust import mad
 import collections
 from matplotlib import pyplot as plt
 import seaborn as sns
+from scipy.optimize import leastsq
+
 
 # Loads the meta data file that will map signal data to labels
 def load_metadata(source_meta):  
@@ -41,8 +43,28 @@ def discete_wavelet_transform(signal, wavelet="db4", level=1):  # Discrete Wavel
     return dwt_signal
 
 
-def detrend_signal(signal):  # Detrend Sinusoidal Behavior to "flatten" signal
-    return np.diff(signal, n=1, axis=-1)  # Calculate the n-th discrete difference along the given axis
+def fit_sinusoid(signal):  # Fit a sinusoidal function to the data
+    t = np.linspace(0, 2*np.pi, len(signal))  # data covers one period, thus 2pi
+    guess_mean = np.mean(signal)
+    guess_std = 3*np.std(signal)/(2**0.5)/(2**0.5)
+    guess_phase = 0
+    guess_freq = 1
+    guess_amp = 20
+    optimize_func = lambda x: x[0]*np.sin(x[1]*t+x[2]) + x[3] - signal
+    est_amp, est_freq, est_phase, est_mean = leastsq(optimize_func, [guess_amp, guess_freq, guess_phase, guess_mean])[0]
+    return est_amp*np.sin(est_freq*t+est_phase) + est_mean  # signal_fit
+
+
+def find_pd_probable(signal_fit, condition):
+    first_derivative = np.gradient(signal_fit)
+    return [i for i, elem in enumerate(first_derivative) if condition(elem)]  #PD Prob Region
+
+
+def detrend_signal(signal, high_prob_idx):  # Detrend Sinusoidal Behavior to "flatten" signal
+    x = np.diff(signal, n=1, axis=-1)  # Calculate the n-th discrete difference along the given axis
+    if max(high_prob_idx) == len(x):
+        high_prob_idx = high_prob_idx[0:-1]
+    return x[high_prob_idx]  # Detrended PD Prob Region
 
 
 #  Feature Extraction Functions
@@ -177,9 +199,11 @@ def vsb_feature_extraction(source_meta, source_data, data_type, dwt_type, peak_t
     for signal_id in range(min_id, max_id+1):
         df_signal = pq.read_pandas(source_data, columns=[str(i) for i in range(signal_id, signal_id + 1)]).to_pandas()
         raw_signal = df_signal[str(signal_id)]  # Raw Signal from Data
-        dwt_signal = discete_wavelet_transform(raw_signal, wavelet=dwt_type, level=1)  # Denoise the Raw Signal with Discrete Wavelet Transform       
-        dwt_detrend_signal = detrend_signal(dwt_signal)  # Detrend the Transformed Signal to "Flatten" it
-        signal_features = get_features(dwt_detrend_signal, signal_id, peak_threshold, peak_min_distance)  # Perform Feature Extraction on the Transformed, "Flattened" Signal
+        dwt_signal = discete_wavelet_transform(raw_signal, wavelet=dwt_type, level=1)  # Denoise the Raw Signal with Discrete Wavelet Transform    
+        fit_signal = fit_sinusoid(dwt_signal)  # Fit a sinusoidal function to the de-noised signal data
+        high_prob_region = find_pd_probable(fit_signal, lambda e: e>0)  # Identify the PD-Probable Region
+        dwt_detrend_pd_reg_signal = detrend_signal(dwt_signal, high_prob_region)  # Detrend the PD-Probable Region of the Transformed Signal to "Flatten" it
+        signal_features = get_features(dwt_detrend_pd_reg_signal, signal_id, peak_threshold, peak_min_distance)  # Perform Feature Extraction on the Transformed, "Flattened" Signal
         
         if data_type.lower() == "train":  # Stage Feature Array for Addition to Feature Matrix
             df_features = pd.DataFrame([[signal_id] + signal_features + [df_meta.target[df_meta.signal_id == signal_id].values[0]]], columns=feature_matrix_columns)
@@ -205,7 +229,7 @@ dwt_type = "db4"  # Wavelets chosen for processing
 #thresholds = [0.71, 0.69, 0.67, 0.65, 0.63, 0.61]  # Thresholds for peakutils.indexes() function
 thresholds = [5.0, 7.0, 10.0]  # Thresholds for np.argwhere(signal <> threshold) method of detecting peaks
 peak_min_distance = 0  # minumum distance required between peak detections
-run_test_data = True
+run_test_data = False
 
 # Raw Data Sources
 if run_test_data:
