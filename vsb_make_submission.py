@@ -63,7 +63,7 @@ def classification_light_gbm_model(df_train):
                      valid_sets=[xgtrain, xgtest], 
                      valid_names=['train','test'], 
                      evals_result=evals_results, 
-                     num_boost_round=1000,
+                     num_boost_round=500,
                      early_stopping_rounds=50,
                      verbose_eval=True, 
                      feval=None)
