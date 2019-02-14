@@ -123,7 +123,7 @@ def survey_thresholds(y_test, y_pred_probs):
     return mcc
 
 
-data_file = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/"+"train_features_thresh_5.0_db4.csv"
+data_file = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/"+"train_features_noCancel_thresh_4.0_db4.csv"
 
 fig=plt.figure(figsize=(14, 8), dpi= 120, facecolor='w', edgecolor='k')
 random_state_values = list(range(0,4000, 40))
@@ -133,5 +133,5 @@ for random_state_value in random_state_values:
     print("MCC for Fault Detection Threshold = 0.91: "+str(mcc[92]))
 plt.xlabel("Fault Classification Threshold")
 plt.ylabel("Matthews Correlation Coefficient")
-plt.title("Peak Detection Threshold : 5.0 , "+str(len(random_state_values))+" Runs with 95% Training Data")
-plt.savefig("plots/mcc_vs_faultThresh_lgbm_newPeaks5.0_split95.png", bbox_inches='tight')
+plt.title("Peak Detection Threshold : 4.0 , "+str(len(random_state_values))+" Runs with 95% Training Data")
+plt.savefig("plots/mcc_vs_faultThresh_lgbm_noCancelPeaks4.0_split95.png", bbox_inches='tight')

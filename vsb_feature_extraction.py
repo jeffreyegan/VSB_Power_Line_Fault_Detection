@@ -104,6 +104,7 @@ def find_all_peaks(signal, threshold=0.7, min_distance=0):
     pois = np.sort(np.concatenate((peaks, valleys)))
     peak_indexes = []
     for pk in pois:
+        #peak_indexes.append(pk)
         peak_indexes.append(pk[0])
     return np.sort(peak_indexes)
 
@@ -181,8 +182,9 @@ def calculate_peaks(signal, true_peak_indexes):  # Peak Characteristics on True 
 def get_features(signal, signal_id, threshold, min_distance): # Extract features from the signal and build an array of them
     peak_indexes = find_all_peaks(signal, threshold, min_distance)
     print("Now processing signal_id: "+str(signal_id)+" with peak detection threshold at "+str(threshold)+" yielding "+str(len(peak_indexes))+" peaks at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-    false_peak_indexes = cancel_false_peaks(signal, peak_indexes)
-    false_peak_indexes = cancel_high_amp_peaks(signal, peak_indexes, false_peak_indexes)
+    #false_peak_indexes = cancel_false_peaks(signal, peak_indexes)
+    #false_peak_indexes = cancel_high_amp_peaks(signal, peak_indexes, false_peak_indexes)
+    false_peak_indexes = []  # Don't cancel peaks
     true_peak_indexes = cancel_flagged_peaks(peak_indexes, false_peak_indexes)
 
     entropy = calculate_entropy(signal)
@@ -212,7 +214,7 @@ def vsb_feature_extraction(source_meta, source_data, data_type, dwt_type, peak_t
         feature_matrix = feature_matrix.append(df_features, ignore_index=True)  # Append Feature Matrix Data Frame
 
     # After processing and extracting features from each signal in the test set, save feature matrix
-    feature_matrix.to_csv("extracted_features/"+data_type+"_features_thresh_"+str(peak_threshold)+"_"+dwt_type+".csv", sep=",")
+    feature_matrix.to_csv("extracted_features/"+data_type+"_features_noCancel_thresh_"+str(peak_threshold)+"_"+dwt_type+".csv", sep=",")
 
 
 
@@ -227,9 +229,9 @@ Reverse_Biorthogonal = ["rbio1.1", "rbio1.3", "rbio1.5", "rbio1.2", "rbio1.4", "
 
 dwt_type = "db4"  # Wavelets chosen for processing 
 #thresholds = [0.71, 0.69, 0.67, 0.65, 0.63, 0.61]  # Thresholds for peakutils.indexes() function
-thresholds = [5.0, 7.0, 10.0]  # Thresholds for np.argwhere(signal <> threshold) method of detecting peaks
+thresholds = [4.0]  # Thresholds for np.argwhere(signal <> threshold) method of detecting peaks
 peak_min_distance = 0  # minumum distance required between peak detections
-run_test_data = False
+run_test_data = True
 
 # Raw Data Sources
 if run_test_data:
