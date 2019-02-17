@@ -28,7 +28,9 @@ def run_light_gbm(data_file, random_state_value):
     print('Loading data...')
     df = load_feature_data(data_file)
 
-    features = ["entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks"]
+    #features = ["entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks"]
+    #features = ["min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks"]
+    features = ["signal_id", "entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks", "hi_count", "lo_count", "low_high_ratio", "hi_true", "lo_true", "low_high_ratio_true"]
     target = ["fault"]
 
     x_train, x_test, y_train, y_test = split_data(df[features], df[target], random_state_value)  # Split Data
@@ -123,7 +125,7 @@ def survey_thresholds(y_test, y_pred_probs):
     return mcc
 
 
-data_file = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/"+"train_features_noCancel_thresh_4.0_db4.csv"
+data_file = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/"+"train_features_thresh_5.0_db4.csv"
 
 fig=plt.figure(figsize=(14, 8), dpi= 120, facecolor='w', edgecolor='k')
 random_state_values = list(range(0,4000, 40))
@@ -133,5 +135,5 @@ for random_state_value in random_state_values:
     print("MCC for Fault Detection Threshold = 0.91: "+str(mcc[92]))
 plt.xlabel("Fault Classification Threshold")
 plt.ylabel("Matthews Correlation Coefficient")
-plt.title("Peak Detection Threshold : 4.0 , "+str(len(random_state_values))+" Runs with 95% Training Data")
-plt.savefig("plots/mcc_vs_faultThresh_lgbm_noCancelPeaks4.0_split95.png", bbox_inches='tight')
+plt.title("Peak Detection Threshold : 5.0 , "+str(len(random_state_values))+" Runs with 95% Training Data")
+plt.savefig("plots/mcc_vs_faultThresh_lgbm_7feats_Peaks5.0_split95.png", bbox_inches='tight')

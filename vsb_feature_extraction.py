@@ -23,7 +23,7 @@ def load_metadata(source_meta):
 
 # Create Feature Data Frame to Store Extracted Features
 def create_feature_matrix():
-    feature_matrix_columns = ["signal_id", "entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks", "fault"]
+    feature_matrix_columns = ["signal_id", "entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks", "hi_count", "lo_count", "low_high_ratio", "hi_true", "lo_true", "low_high_ratio_true", "fault"]
     feature_matrix = pd.DataFrame([], columns=feature_matrix_columns)
     return feature_matrix, feature_matrix_columns
 
@@ -106,7 +106,7 @@ def find_all_peaks(signal, threshold=0.7, min_distance=0):
     for pk in pois:
         #peak_indexes.append(pk)
         peak_indexes.append(pk[0])
-    return np.sort(peak_indexes)
+    return np.sort(peak_indexes), peaks, valleys
 
 
 def calculate_peak_widths(peak_idxs):
@@ -137,14 +137,12 @@ def cancel_false_peaks(signal, peak_indexes):
                 if min(abs(signal[peak_indexes[pk]]),abs(signal[peak_indexes[pk+1]]))/max(abs(signal[peak_indexes[pk]]),abs(signal[peak_indexes[pk+1]])) > max_height_ratio:  # ratio of opposing polarity check
                     scrub = list(x for x in range(len(peak_indexes)) if peak_indexes[pk] <= peak_indexes[x] <= peak_indexes[pk]+max_pulse_train)  # build pulse train
                     for x in scrub:
-                        print(peak_indexes[x])
                         false_peak_indexes.append(peak_indexes[x])
 
             if (signal[peak_indexes[pk]] < 0 and signal[peak_indexes[pk+1]] > 0) and (peak_indexes[pk+1] - peak_indexes[pk]) < max_sym_distance:
                 if min(abs(signal[peak_indexes[pk]]),abs(signal[peak_indexes[pk+1]]))/max(abs(signal[peak_indexes[pk]]),abs(signal[peak_indexes[pk+1]])) > max_height_ratio:
                     scrub = list(x for x in range(len(peak_indexes)) if peak_indexes[pk] <= peak_indexes[x] <= peak_indexes[pk]+max_pulse_train)
                     for x in scrub:
-                        print(peak_indexes[x])
                         false_peak_indexes.append(peak_indexes[x])
     return false_peak_indexes
 
@@ -168,6 +166,25 @@ def cancel_flagged_peaks(peak_indexes, false_peak_indexes):
     return true_peak_indexes
 
 
+def low_high_peaks(signal, true_peak_indexes, hi_idx, lo_idx):
+    if np.size(np.array(hi_idx))> 0:
+        lhr = 1.0*np.size(np.array(lo_idx))/np.size(np.array(hi_idx))
+    else:
+        lhr = 0.0
+    hi_true = 0
+    lo_true = 0
+    for x in true_peak_indexes:
+        if signal[x] > 0.0:
+            hi_true += 1
+        else:
+            lo_true += 1
+    if hi_true > 0:
+        lhrt = 1.0*lo_true/hi_true
+    else:
+        lhrt = 0.0
+    return [hi_idx, lo_idx, lhr, hi_true, lo_true, lhrt]
+
+
 def calculate_peaks(signal, true_peak_indexes):  # Peak Characteristics on True Peaks
     peak_values = signal[true_peak_indexes]
     num_detect_peak = len(true_peak_indexes)
@@ -182,18 +199,19 @@ def calculate_peaks(signal, true_peak_indexes):  # Peak Characteristics on True 
 
 
 def get_features(signal, signal_id, threshold, min_distance): # Extract features from the signal and build an array of them
-    peak_indexes = find_all_peaks(signal, threshold, min_distance)
+    peak_indexes, hi_idx, lo_idx = find_all_peaks(signal, threshold, min_distance)
     print("Now processing signal_id: "+str(signal_id)+" with peak detection threshold at "+str(threshold)+" yielding "+str(len(peak_indexes))+" peaks at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     false_peak_indexes = cancel_false_peaks(signal, peak_indexes)
     false_peak_indexes = cancel_high_amp_peaks(signal, peak_indexes, false_peak_indexes)
-    false_peak_indexes = []  # Don't cancel peaks
+    #false_peak_indexes = []  # Don't cancel peaks
     true_peak_indexes = cancel_flagged_peaks(peak_indexes, false_peak_indexes)
 
     entropy = calculate_entropy(signal)
     statistics = calculate_statistics(signal)
     crossings = calculate_crossings(signal)
     peaks = calculate_peaks(signal, true_peak_indexes)
-    return [entropy] + statistics + crossings + peaks
+    low_high_stats = low_high_peaks(signal, true_peak_indexes, hi_idx, lo_idx)
+    return [entropy] + statistics + crossings + peaks + low_high_stats
 
 
 def vsb_feature_extraction(source_meta, source_data, data_type, dwt_type, peak_threshold, peak_min_distance):  
@@ -216,7 +234,7 @@ def vsb_feature_extraction(source_meta, source_data, data_type, dwt_type, peak_t
         feature_matrix = feature_matrix.append(df_features, ignore_index=True)  # Append Feature Matrix Data Frame
 
     # After processing and extracting features from each signal in the test set, save feature matrix
-    feature_matrix.to_csv("extracted_features/"+data_type+"_features_noCancel_thresh_"+str(peak_threshold)+"_"+dwt_type+".csv", sep=",")
+    feature_matrix.to_csv("extracted_features/"+data_type+"_featuresHiLo_thresh_"+str(peak_threshold)+"_"+dwt_type+".csv", sep=",")
 
 
 
@@ -231,9 +249,9 @@ Reverse_Biorthogonal = ["rbio1.1", "rbio1.3", "rbio1.5", "rbio1.2", "rbio1.4", "
 
 dwt_type = "db4"  # Wavelets chosen for processing 
 #thresholds = [0.71, 0.69, 0.67, 0.65, 0.63, 0.61]  # Thresholds for peakutils.indexes() function
-thresholds = [4.0]  # Thresholds for np.argwhere(signal <> threshold) method of detecting peaks
+thresholds = [4.5]  # Thresholds for np.argwhere(signal <> threshold) method of detecting peaks
 peak_min_distance = 0  # minumum distance required between peak detections
-run_test_data = True
+run_test_data = False
 
 # Raw Data Sources
 if run_test_data:
