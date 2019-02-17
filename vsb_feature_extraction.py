@@ -137,18 +137,20 @@ def cancel_false_peaks(signal, peak_indexes):
                 if min(abs(signal[peak_indexes[pk]]),abs(signal[peak_indexes[pk+1]]))/max(abs(signal[peak_indexes[pk]]),abs(signal[peak_indexes[pk+1]])) > max_height_ratio:  # ratio of opposing polarity check
                     scrub = list(x for x in range(len(peak_indexes)) if peak_indexes[pk] <= peak_indexes[x] <= peak_indexes[pk]+max_pulse_train)  # build pulse train
                     for x in scrub:
+                        print(peak_indexes[x])
                         false_peak_indexes.append(peak_indexes[x])
 
             if (signal[peak_indexes[pk]] < 0 and signal[peak_indexes[pk+1]] > 0) and (peak_indexes[pk+1] - peak_indexes[pk]) < max_sym_distance:
                 if min(abs(signal[peak_indexes[pk]]),abs(signal[peak_indexes[pk+1]]))/max(abs(signal[peak_indexes[pk]]),abs(signal[peak_indexes[pk+1]])) > max_height_ratio:
                     scrub = list(x for x in range(len(peak_indexes)) if peak_indexes[pk] <= peak_indexes[x] <= peak_indexes[pk]+max_pulse_train)
                     for x in scrub:
+                        print(peak_indexes[x])
                         false_peak_indexes.append(peak_indexes[x])
     return false_peak_indexes
 
 
 def cancel_high_amp_peaks(signal, peak_indexes, false_peak_indexes):
-    threshold = 40  # amplitude threshld for determining high amplitude peaks for cancellation
+    threshold = 50  # amplitude threshld for determining high amplitude peaks for cancellation
     #peaks = peakutils.indexes(1.0*(signal), thres=0.80, min_dist=0)
     peaks = np.argwhere(signal > 1.0*threshold)
     #valleys = peakutils.indexes(-1.0*(signal), thres=0.80, min_dist=0)
@@ -182,8 +184,8 @@ def calculate_peaks(signal, true_peak_indexes):  # Peak Characteristics on True 
 def get_features(signal, signal_id, threshold, min_distance): # Extract features from the signal and build an array of them
     peak_indexes = find_all_peaks(signal, threshold, min_distance)
     print("Now processing signal_id: "+str(signal_id)+" with peak detection threshold at "+str(threshold)+" yielding "+str(len(peak_indexes))+" peaks at "+datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-    #false_peak_indexes = cancel_false_peaks(signal, peak_indexes)
-    #false_peak_indexes = cancel_high_amp_peaks(signal, peak_indexes, false_peak_indexes)
+    false_peak_indexes = cancel_false_peaks(signal, peak_indexes)
+    false_peak_indexes = cancel_high_amp_peaks(signal, peak_indexes, false_peak_indexes)
     false_peak_indexes = []  # Don't cancel peaks
     true_peak_indexes = cancel_flagged_peaks(peak_indexes, false_peak_indexes)
 

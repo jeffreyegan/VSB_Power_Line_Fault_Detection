@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 def split_data(features, labels, random_state_value=1):
     from sklearn.model_selection import train_test_split
     # Using standard split of 80-20 training to testing data split ratio and fixing random_state=1 for repeatability
-    x_train, x_test, y_train, y_test = train_test_split(features, labels, train_size=0.95, test_size=0.05, random_state=random_state_value)
+    x_train, x_test, y_train, y_test = train_test_split(features, labels, train_size=0.80, test_size=0.20, random_state=random_state_value)
     return x_train, x_test, y_train, y_test
 
 
@@ -102,18 +102,18 @@ def predict_light_gbm_model(classifier, df_test, threshold):
 
 # Train Model with Full Set, Return Classifier Model
 dwt = "db4"
-peak_thresh = "5.0"
+peak_thresh = "4.0"
 
-training_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/train_features_thresh_"+peak_thresh+"_"+dwt+".csv"
+training_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/train_features_noCancel_thresh_"+peak_thresh+"_"+dwt+".csv"
 df_train = pd.read_csv(training_data)
 classifier = classification_light_gbm_model(df_train)  # Light GBM
 
 
 # Make Predictions
-test_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/test_features_thresh_"+peak_thresh+"_"+dwt+".csv"
+test_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/test_features_noCancel_thresh_"+peak_thresh+"_"+dwt+".csv"
 df_test = pd.read_csv(test_data).drop(['Unnamed: 0'],axis=1)
 
-fault_detection_threshold = 0.91
+fault_detection_threshold = 0.85
 predicted_faults = predict_light_gbm_model(classifier, df_test, fault_detection_threshold)
 df_test["fault"] = predicted_faults
 
