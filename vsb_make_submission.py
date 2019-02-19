@@ -20,6 +20,7 @@ def classification_light_gbm_model(df_train):
 
     #features = ["entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks"]
     features = ["entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks", "hi_count", "lo_count", "low_high_ratio", "hi_true", "lo_true", "low_high_ratio_true"]
+    features = ["entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks", "low_high_ratio", "hi_true", "lo_true", "low_high_ratio_true"]
     target = ["fault"]
     x_train, x_test, y_train, y_test = split_data(df_train[features], df_train[target], 2019)  # Split Data
 
@@ -88,7 +89,8 @@ def classification_light_gbm_model(df_train):
 
 def predict_light_gbm_model(classifier, df_test, threshold):
     print('Predicting...')
-    test_features = ["entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks"]
+    test_features = ["entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks", "hi_count", "lo_count", "low_high_ratio", "hi_true", "lo_true", "low_high_ratio_true"]
+    test_features = ["entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks", "low_high_ratio", "hi_true", "lo_true", "low_high_ratio_true"]
     n_estimators = classifier.best_iteration
     y_pred_probs = classifier.predict(df_test[test_features], n_estimators)
 
@@ -103,15 +105,15 @@ def predict_light_gbm_model(classifier, df_test, threshold):
 
 # Train Model with Full Set, Return Classifier Model
 dwt = "db4"
-peak_thresh = "4.0"
+peak_thresh = "4.5"
 
-training_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/train_features_noCancel_thresh_"+peak_thresh+"_"+dwt+".csv"
+training_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/train_featuresHiLo_thresh_"+peak_thresh+"_"+dwt+".csv"
 df_train = pd.read_csv(training_data)
 classifier = classification_light_gbm_model(df_train)  # Light GBM
 
 
 # Make Predictions
-test_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/test_features_noCancel_thresh_"+peak_thresh+"_"+dwt+".csv"
+test_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/test_featuresHiLo_thresh_"+peak_thresh+"_"+dwt+".csv"
 df_test = pd.read_csv(test_data).drop(['Unnamed: 0'],axis=1)
 
 fault_detection_threshold = 0.85
@@ -120,7 +122,7 @@ df_test["fault"] = predicted_faults
 
 
 # Make Submission File
-submission_filename = "submissions/prediction_submission_"+peak_thresh+"_"+dwt+"_"+str(fault_detection_threshold)+"fdt_.csv"
+submission_filename = "submissions/prediction_submissionHiLo_"+peak_thresh+"_"+dwt+"_"+str(fault_detection_threshold)+"fdt_.csv"
 
 f_o = open(submission_filename, "w+")
 f_o.write("signal_id,target\n")

@@ -251,7 +251,7 @@ dwt_type = "db4"  # Wavelets chosen for processing
 #thresholds = [0.71, 0.69, 0.67, 0.65, 0.63, 0.61]  # Thresholds for peakutils.indexes() function
 thresholds = [4.5]  # Thresholds for np.argwhere(signal <> threshold) method of detecting peaks
 peak_min_distance = 0  # minumum distance required between peak detections
-run_test_data = False
+run_test_data = True
 
 # Raw Data Sources
 if run_test_data:
