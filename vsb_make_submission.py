@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 def split_data(features, labels, random_state_value=1):
     from sklearn.model_selection import train_test_split
     # Using standard split of 80-20 training to testing data split ratio and fixing random_state=1 for repeatability
-    x_train, x_test, y_train, y_test = train_test_split(features, labels, train_size=0.80, test_size=0.20, random_state=random_state_value)
+    x_train, x_test, y_train, y_test = train_test_split(features, labels, train_size=0.85, test_size=0.15, random_state=random_state_value)
     return x_train, x_test, y_train, y_test
 
 
@@ -22,7 +22,7 @@ def classification_light_gbm_model(df_train):
     features = ["entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks", "hi_count", "lo_count", "low_high_ratio", "hi_true", "lo_true", "low_high_ratio_true"]
     features = ["entropy", "n5", "n25", "n75", "n95", "median", "mean", "std", "var", "rms", "no_zero_crossings", "no_mean_crossings", "min_height", "max_height", "mean_height", "min_width", "max_width", "mean_width", "num_detect_peak", "num_true_peaks", "low_high_ratio", "hi_true", "lo_true", "low_high_ratio_true"]
     target = ["fault"]
-    x_train, x_test, y_train, y_test = split_data(df_train[features], df_train[target], 2019)  # Split Data
+    x_train, x_test, y_train, y_test = split_data(df_train[features], df_train[target], 189)  # Split Data
 
     print("preparing validation datasets")
     xgdata = lgb.Dataset(df_train[features], df_train[target])
@@ -31,14 +31,12 @@ def classification_light_gbm_model(df_train):
 
     evals_results = {}
 
-    dtrain = lgb.Dataset(x_train, label=y_train)  # Data set used to train model
-    training_iterations = 10 # Number of iterations used to train model
-    metrics = 'auc'
+    metrics = 'binary_logloss'
 
     lgb_params = {
         'objective': 'binary',
         'metric': metrics,
-        'learning_rate': 0.01,
+        'learning_rate': 0.025,
         #'is_unbalance': 'true',  #because training data is unbalance (replaced with scale_pos_weight)
         'num_leaves': 31,  # we should let it be smaller than 2^(max_depth)
         'max_depth': -1,  # -1 means no limit
@@ -116,13 +114,13 @@ classifier = classification_light_gbm_model(df_train)  # Light GBM
 test_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/test_featuresHiLo_thresh_"+peak_thresh+"_"+dwt+".csv"
 df_test = pd.read_csv(test_data).drop(['Unnamed: 0'],axis=1)
 
-fault_detection_threshold = 0.85
+fault_detection_threshold = 0.80
 predicted_faults = predict_light_gbm_model(classifier, df_test, fault_detection_threshold)
 df_test["fault"] = predicted_faults
 
 
 # Make Submission File
-submission_filename = "submissions/prediction_submissionHiLo_"+peak_thresh+"_"+dwt+"_"+str(fault_detection_threshold)+"fdt_.csv"
+submission_filename = "submissions/prediction_submissionHiLoBLL_"+peak_thresh+"_"+dwt+"_"+str(fault_detection_threshold)+"fdt_.csv"
 
 f_o = open(submission_filename, "w+")
 f_o.write("signal_id,target\n")

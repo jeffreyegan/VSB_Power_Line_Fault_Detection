@@ -14,7 +14,7 @@ def load_feature_data(file_name):
 def split_data(features, labels, random_state_value=1):
     from sklearn.model_selection import train_test_split
     # Using standard split of 80-20 training to testing data split ratio and fixing random_state=1 for repeatability
-    x_train, x_test, y_train, y_test = train_test_split(features, labels, train_size=0.95, test_size=0.05, random_state=random_state_value)
+    x_train, x_test, y_train, y_test = train_test_split(features, labels, train_size=0.8, test_size=0.2, random_state=random_state_value)
     return x_train, x_test, y_train, y_test
 
 
@@ -22,7 +22,9 @@ def split_data(features, labels, random_state_value=1):
 # f(y_true: array, y_pred: array) -> name: string, eval_result: float, is_higher_better: bool
 # Matthews Correlation Coefficient (MCC)
 def mcc(truth, predictions):
-    return 'MCC', matthews_corrcoef(truth, predictions), True
+    # return 'MCC', matthews_corrcoef(truth, predictions), True
+    return matthews_corrcoef(truth, predictions)
+    
 
 def run_light_gbm(data_file, random_state_value):
     print('Loading data...')
@@ -39,21 +41,16 @@ def run_light_gbm(data_file, random_state_value):
     x_train, x_test, y_train, y_test = split_data(df[features], df[target], random_state_value)  # Split Data
 
     print("preparing validation datasets")
-    xgtrain = lgb.Dataset(x_train, y_train)
+    xgtrain = lgb.Dataset(x_train, y_train)  # Data set used to train model
     xgtest = lgb.Dataset(x_test, y_test)
 
     evals_results = {}
-
-
-
-    dtrain = lgb.Dataset(x_train, label=y_train)  # Data set used to train model
-    training_iterations = 10 # Number of iterations used to train model
-    metrics = 'auc'
+    metrics = 'binary_logloss'
 
     lgb_params = {
         'objective': 'binary',
         'metric': metrics,
-        'learning_rate': 0.01,
+        'learning_rate': 0.025,
         #'is_unbalance': 'true',  #because training data is unbalance (replaced with scale_pos_weight)
         'num_leaves': 31,  # we should let it be smaller than 2^(max_depth)
         'max_depth': -1,  # -1 means no limit
@@ -132,11 +129,19 @@ data_file = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_featur
 
 fig=plt.figure(figsize=(14, 8), dpi= 120, facecolor='w', edgecolor='k')
 random_state_values = list(range(0,4000, 40))
+mcc_array = np.zeros((len(random_state_values), len(np.linspace(0.01, 0.99, 99))))
+m_idx = 0
 for random_state_value in random_state_values:
     classifier, y_test, y_pred_probs = run_light_gbm(data_file, random_state_value)
     mcc = survey_thresholds(y_test, y_pred_probs)
+    mcc_array[m_idx,:] = mcc
     print("MCC for Fault Detection Threshold = 0.91: "+str(mcc[92]))
+    m_idx+=1
+plt.plot(np.linspace(0.01, 0.99, 99), np.median(mcc_array, axis=0), color="#2a2a2a", label="Median")
+plt.plot(np.linspace(0.01, 0.99, 99), np.percentile(mcc_array, 25, axis=0), '--', color="#2a2a2a", label="25th Percentile")
+plt.legend()
+plt.grid()
 plt.xlabel("Fault Classification Threshold")
 plt.ylabel("Matthews Correlation Coefficient")
-plt.title("Peak Detection Threshold : 4.5 , "+str(len(random_state_values))+" Runs with 95% Training Data")
-plt.savefig("plots/mcc_vs_faultThresh_lgbm_HiLo_Peaks4.5_split95.png", bbox_inches='tight')
+plt.title("Peak Detection Threshold : 4.5 , "+str(len(random_state_values))+" Runs with 80% Training Data")
+plt.savefig("plots/mcc_vs_faultThresh_lgbm_cv_learn0.025_split80.png", bbox_inches='tight')
