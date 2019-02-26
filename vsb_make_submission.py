@@ -114,7 +114,7 @@ classifier = classification_light_gbm_model(df_train)  # Light GBM
 test_data = "/home/jeffrey/repos/VSB_Power_Line_Fault_Detection/extracted_features/test_featuresHiLo_thresh_"+peak_thresh+"_"+dwt+".csv"
 df_test = pd.read_csv(test_data).drop(['Unnamed: 0'],axis=1)
 
-fault_detection_threshold = 0.80
+fault_detection_threshold = 0.85
 predicted_faults = predict_light_gbm_model(classifier, df_test, fault_detection_threshold)
 df_test["fault"] = predicted_faults
 

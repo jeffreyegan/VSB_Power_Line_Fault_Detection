@@ -36,3 +36,12 @@ rerun analysis with varying train test split monte carlos with new extracted fea
 goal is consistent MCC > 0.5 for next submission
 
 work in VSB_Final Notebook and elsewhere?
+
+
+
+
+
+cross validation
+
+over fitting
+
