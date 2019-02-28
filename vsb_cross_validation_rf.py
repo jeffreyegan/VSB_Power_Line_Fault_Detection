@@ -83,51 +83,17 @@ class Create_ensemble(object):
         return train_proba, test_proba, train_pred, test_pred
 
 def re_predict(data, threshods):
-
     argmax = np.argmax(data)
-
-    ## If the argmax is 2 (class-3) then ovbiously return this highest label
-    if argmax == 2: 
-        return (argmax +1)
-
-    # If argmax is 1 (class-2) there is a chnace that, label is class-2 if
-    # the probability of the class is greater than the threshold otherwise obviously
-    # return this highest label (class-3)
-    elif argmax == 1:
+    if argmax == 1:
         if data[argmax] >= threshods[argmax] : 
-            return (argmax +1)
+            return 1
         else:
-            return (argmax +2)
-
-    # If the argmax is 0 (class-1) then there are chances that label is class-1 if
-    # the probability of the class is greater than the threshold otherwise label can be
-    # either next two highest labels (class-2 or class-3). To determine the exact class
-    # class, we have to consider four cases.
-    # case A : if class_2_prob >= threshold and class_3_prob < threshold then pick class-2
-    # case B : if class_3_prob >= threshold and class_2_prob < threshold then pick class-3
-    # case C : if class_2_prob < threshold and class_3_prob < threshold then pick class-1
-    # case D : if class_2_prob > threshold and class_3_prob > threshold then pick class-3
-
-    elif argmax == 0:
-
+            return 0
+    else:  # argmax == 0 
         if data[argmax] >= threshods[argmax] : 
-            return (argmax +1)
+            return 0
         else:
-            # case A : if class_2_prob >= threshold and class_3_prob < threshold then pick class-2
-            if data[argmax + 1] >= threshods[argmax + 1] and data[argmax + 2] < threshods[argmax + 2]:
-                return (argmax + 2)
-
-            # case B : if class_3_prob >= threshold and class_2_prob < threshold then pick class-3
-            if data[argmax + 2] >= threshods[argmax + 2] and data[argmax + 1] < threshods[argmax + 1]:
-                return (argmax + 3)
-
-            # case C : if class_2_prob < threshold and class_3_prob < threshold then pick class-1
-            if data[argmax + 1] < threshods[argmax + 1] and data[argmax + 2] < threshods[argmax + 2]:
-                return (argmax + 1)
-
-            # case D : if class_2_prob > threshold and class_3_prob > threshold then pick class-3
-            if data[argmax + 1] > threshods[argmax + 1] and data[argmax + 2] > threshods[argmax + 2]:
-                return (argmax + 3)
+            return 1
 
 
 # Load Data
@@ -143,10 +109,10 @@ df_test = pd.read_csv(data_file)
 test = df_test[features]
 
 
-
 random_states = [1]
 for random_state in random_states:
-    class_weight = dict({0:1.9, 1:180})
+    class_weight = dict({0:1.0, 1:38.4})
+    class_weight = dict({0:0.5, 1:2.0})
 
     rdf = RandomForestClassifier(bootstrap=True, class_weight=class_weight, criterion='gini',
             max_depth=8, max_features='auto', max_leaf_nodes=None,
@@ -166,41 +132,61 @@ for random_state in random_states:
 
     train_proba, test_proba, train_pred, test_pred = lgb_stack.predict(xtrain, ytrain, test)
 
+    print(train_pred[0])
+    print(test_pred[0])
+    print('\nPerformance Metrics after Weighted Random Forest Cross Validation')
     print('1. The F-1 score of the model {}\n'.format(f1_score(ytrain, train_pred, average='macro')))
     print('2. The recall score of the model {}\n'.format(recall_score(ytrain, train_pred, average='macro')))
     print('3. The Matthews Correlation Coefficient: {}\n'.format(matthews_corrcoef(ytrain, train_pred)))
     print('4. Classification report \n {} \n'.format(classification_report(ytrain, train_pred)))
     print('5. Confusion matrix \n {} \n'.format(confusion_matrix(ytrain, train_pred)))
     
+
     # histogram of predicted probabilities
     plt.figure(figsize=(12, 4))
     nclasses = 2
+    titles = ["Probabilities for No Partial Discharge Fault Present", "Probabilities for Partial Discharge Fault Present"]
     for i in range(nclasses):
-        
         plt.subplot(1, nclasses, i+1)
-        plt.hist(train_proba[:, i], bins=20, histtype='bar', rwidth=0.95)
+        plt.hist(train_proba[:, i], bins=50, histtype='bar', rwidth=0.95)
         plt.xlim(0,1)
-        plt.title('Predicted class-{} probabilities'.format(i+1))
+        plt.title(titles[i])
         plt.xlabel('Probability')
         plt.ylabel('Frequency')
     plt.tight_layout()
-    plt.show()
+    #plt.show()
+
 
     y = label_binarize(ytrain, classes=[0, 1])
     _, _, th1 = roc_curve(y[:, 0], train_proba[:, 0])
     _, _, th2 = roc_curve(y[:, 0], train_proba[:, 1])
-
+    print('\nMedian Detection Thresholds for Fault Detection')  # use for setting reprediction thresholds
     print(np.median(th1))
     print(np.median(th2))
 
 
-    threshold = [0.47, 0.15]
+    threshold = [0.5, 0.1]
     new_pred = []
     for i in range(train_pred.shape[0]):
         new_pred.append(re_predict(train_proba[i, :], threshold))
-    
+    print('\nPerformance Metrics after Over Prediction')
     print('1. The F-1 score of the model {}\n'.format(f1_score(ytrain, new_pred, average='macro')))
     print('2. The recall score of the model {}\n'.format(recall_score(ytrain, new_pred, average='macro')))
     print('3. The Matthews Correlation Coefficient: {}\n'.format(matthews_corrcoef(ytrain, new_pred)))
     print('4. Classification report \n {} \n'.format(classification_report(ytrain, new_pred)))
     print('5. Confusion matrix \n {} \n'.format(confusion_matrix(ytrain, new_pred)))
+
+
+test_pred = np.median(test_pred, axis=1).astype(int)
+df_test["fault"] = test_pred
+
+# Make Submission File
+submission_filename = "submissions/prediction_submission_CV.csv"
+
+f_o = open(submission_filename, "w+")
+f_o.write("signal_id,target\n")
+for idx in range(len(df_test)):
+    signal_id = df_test["signal_id"][idx]
+    fault = df_test["fault"][idx]
+    f_o.write(str(signal_id)+","+str(fault)+"\n")
+f_o.close()
