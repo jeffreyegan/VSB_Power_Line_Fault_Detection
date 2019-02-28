@@ -111,7 +111,7 @@ test = df_test[features]
 
 random_states = [1]
 for random_state in random_states:
-    class_weight = dict({0:1.0, 1:38.4})
+    #class_weight = dict({0:1.0, 1:38.4})
     class_weight = dict({0:0.5, 1:2.0})
 
     rdf = RandomForestClassifier(bootstrap=True, class_weight=class_weight, criterion='gini',
@@ -181,7 +181,7 @@ test_pred = np.median(test_pred, axis=1).astype(int)
 df_test["fault"] = test_pred
 
 # Make Submission File
-submission_filename = "submissions/prediction_submission_CV.csv"
+submission_filename = "submissions/prediction_submission_CV1.csv"
 
 f_o = open(submission_filename, "w+")
 f_o.write("signal_id,target\n")
