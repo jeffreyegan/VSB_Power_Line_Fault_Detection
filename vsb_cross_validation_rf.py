@@ -80,7 +80,7 @@ class Create_ensemble(object):
                 
             test_proba /= self.n_splits
             
-        return train_proba, test_proba, train_pred, test_pred
+        return train_proba, test_proba, train_pred, test_pred, clf
 
 def re_predict(data, threshods):
     argmax = np.argmax(data)
@@ -111,7 +111,6 @@ test = df_test[features]
 
 random_states = [1]
 for random_state in random_states:
-    #class_weight = dict({0:1.0, 1:38.4})
     class_weight = dict({0:0.5, 1:2.0})
 
     rdf = RandomForestClassifier(bootstrap=True, class_weight=class_weight, criterion='gini',
@@ -120,8 +119,7 @@ for random_state in random_states:
             min_samples_leaf=4, min_samples_split=10,
             min_weight_fraction_leaf=0.0, n_estimators=300, n_jobs=-1,
             oob_score=False,
-            random_state=random_state,
-            verbose=0, warm_start=False)
+            random_state=random_state, verbose=0, warm_start=False)
 
     base_models = [rdf]
     n_splits = 5
@@ -130,7 +128,7 @@ for random_state in random_states:
     xtrain = train.drop(['fault'], axis=1)
     ytrain = train['fault'].values
 
-    train_proba, test_proba, train_pred, test_pred = lgb_stack.predict(xtrain, ytrain, test)
+    train_proba, test_proba, train_pred, test_pred, clf = lgb_stack.predict(xtrain, ytrain, test)
 
     print(train_pred[0])
     print(test_pred[0])
@@ -143,18 +141,30 @@ for random_state in random_states:
     
 
     # histogram of predicted probabilities
+    blues = ["#66D7EB", "#51ACC5", "#3E849E", "#2C5F78", "#1C3D52", "#0E1E2B"]
     plt.figure(figsize=(12, 4))
     nclasses = 2
     titles = ["Probabilities for No Partial Discharge Fault Present", "Probabilities for Partial Discharge Fault Present"]
     for i in range(nclasses):
         plt.subplot(1, nclasses, i+1)
-        plt.hist(train_proba[:, i], bins=50, histtype='bar', rwidth=0.95)
+        plt.hist(train_proba[:, i], bins=50, histtype='bar', rwidth=0.95, color=blues[1])
         plt.xlim(0,1)
         plt.title(titles[i])
         plt.xlabel('Probability')
         plt.ylabel('Frequency')
     plt.tight_layout()
-    #plt.show()
+    plt.show()
+
+    # histogram of important features
+    imp = clf.feature_importances_
+    imp, features = zip(*sorted(zip(imp, features)))
+    plt.figure(figsize=(12, 4))
+    plt.barh(range(len(features)), imp, color=blues[1], align="center")
+    plt.yticks(range(len(features)), features)
+    plt.xlabel("Importance of Features")
+    plt.ylabel("Features")
+    plt.title("Importance of Each Feature in Classifier Model")
+    plt.show()
 
 
     y = label_binarize(ytrain, classes=[0, 1])
@@ -177,11 +187,12 @@ for random_state in random_states:
     print('5. Confusion matrix \n {} \n'.format(confusion_matrix(ytrain, new_pred)))
 
 
+
 test_pred = np.median(test_pred, axis=1).astype(int)
 df_test["fault"] = test_pred
 
 # Make Submission File
-submission_filename = "submissions/prediction_submission_CV1.csv"
+submission_filename = "submissions/prediction_submission_cv.csv"
 
 f_o = open(submission_filename, "w+")
 f_o.write("signal_id,target\n")
