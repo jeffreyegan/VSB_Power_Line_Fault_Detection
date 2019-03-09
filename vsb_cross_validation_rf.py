@@ -1,8 +1,3 @@
-# https://towardsdatascience.com/working-with-highly-imbalanced-datasets-in-machine-learning-projects-c70c5f2a7b16
-# https://github.com/msahamed/handle_imabalnce_class/blob/master/imbalance_datasets_machine_learning.ipynb
-
-# https://chrisalbon.com/machine_learning/trees_and_forests/random_forest_classifier_example/
-
 import numpy as np
 import pandas as pd
 import warnings
