@@ -8,3 +8,5 @@ Your challenge is to detect partial discharge patterns in signals acquired from 
 ENET Centre researches and develops renewable energy resources with the goal of reducing or eliminating harmful environmental impacts. Their efforts focus on developing technology solutions around transportation and processing of energy raw materials.
 
 By developing a solution to detect partial discharge you’ll help reduce maintenance costs, and prevent power outages.
+
+`docker run --gpus all --cap-add=SYS_ADMIN --rm -v /dev/shm:/dev/shm -v /home/jeffrey/repos/torch_gpu_opt/code:/code -it --entrypoint bash vsb_dl:latest`
