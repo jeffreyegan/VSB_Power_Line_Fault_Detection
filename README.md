@@ -245,5 +245,8 @@ _2018.pdf.
 My Kaggle kernel has been set public: https://www.kaggle.com/jeffreyegan/vsb-power-line-fault-detection-approach
 
 ## Run Python Notebook
+Retrieve the raw data from https://www.kaggle.com/competitions/vsb-power-line-fault-detection/data and stage the parquets in `/source_data/` within the repo.
 
-`docker run --gpus all --cap-add=SYS_ADMIN --rm -v /dev/shm:/dev/shm -v /home/jeffrey/repos/VSB_Power_Line_Fault_Detection:/code -it --entrypoint bash vsb_dl:latest`
+Build the `Dockerfile`
+
+Run the container: `docker run --gpus all --cap-add=SYS_ADMIN --rm -v /dev/shm:/dev/shm -v /home/jeffrey/repos/VSB_Power_Line_Fault_Detection:/code -it --entrypoint bash vsb_dl:latest`
